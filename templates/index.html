@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minecraft Myanmar | Official Portal</title>
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --card-bg: #1e293b;
+            --green: #22c55e;
+            --green-hover: #16a34a;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        body { background-color: var(--bg-dark); color: var(--text-main); display: flex; flex-direction: column; min-height: 100vh; }
+
+        header { padding: 2rem 1rem; text-align: center; background: linear-gradient(180deg, rgba(34,197,94,0.15) 0%, transparent 100%); }
+        .logo { font-size: 2.5rem; color: var(--green); text-shadow: 0 0 15px rgba(34,197,94,0.4); text-transform: uppercase; font-weight: 800; }
+        
+        .container { max-width: 1000px; margin: 0 auto; padding: 1.5rem; width: 100%; }
+        
+        .community-box { background: var(--card-bg); padding: 1.5rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 2rem; text-align: center; }
+        .btn-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem; }
+        .btn { display: inline-block; padding: 0.8rem 1.2rem; background: var(--green); color: #000; font-weight: bold; border-radius: 8px; text-decoration: none; transition: 0.2s; }
+        .btn:hover { background: var(--green-hover); transform: translateY(-2px); }
+
+        .posts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; }
+        .post-card { background: var(--card-bg); border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; }
+        .post-img { width: 100%; height: 180px; object-fit: cover; }
+        .post-body { padding: 1.2rem; display: flex; flex-direction: column; flex-grow: 1; }
+        .category-badge { background: rgba(34,197,94,0.2); color: var(--green); padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; width: fit-content; margin-bottom: 0.5rem; }
+        .post-title { font-size: 1.3rem; margin-bottom: 0.5rem; }
+        .post-desc { color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1rem; flex-grow: 1; }
+
+        nav { display: flex; justify-content: flex-end; padding: 1rem 2rem; }
+        .admin-link { color: var(--text-muted); text-decoration: none; font-size: 0.9rem; }
+        .admin-link:hover { color: var(--green); }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <a href="/login" class="admin-link">🔒 Admin Login</a>
+    </nav>
+
+    <header>
+        <h1 class="logo">⛏️ Minecraft Myanmar</h1>
+        <p style="color: var(--text-muted);">Addons, Mods, News & Community Hub</p>
+    </header>
+
+    <div class="container">
+        <!-- Community Links -->
+        <div class="community-box">
+            <h2>📢 Join Our Official Community</h2>
+            <div class="btn-grid">
+                <a href="https://t.me/minecraftmyanmar_addrons" target="_blank" class="btn">📲 Telegram Channel</a>
+                <a href="https://t.me/minecraftmyanmar_chat" target="_blank" class="btn">💬 Telegram Group</a>
+            </div>
+        </div>
+
+        <!-- Latest Posts -->
+        <h2 style="margin-bottom: 1rem;">🔥 Latest Addons & Updates</h2>
+        <div class="posts-grid">
+            {% if posts %}
+                {% for post in posts %}
+                <div class="post-card">
+                    <img src="{{ post.image_url }}" alt="{{ post.title }}" class="post-img">
+                    <div class="post-body">
+                        <span class="category-badge">{{ post.category }}</span>
+                        <h3 class="post-title">{{ post.title }}</h3>
+                        <p class="post-desc">{{ post.description }}</p>
+                        {% if post.download_link %}
+                            <a href="{{ post.download_link }}" target="_blank" class="btn" style="text-align: center;">📥 Download / View</a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p style="color: var(--text-muted);">No posts published yet! Check back soon or log in as Admin to create one.</p>
+            {% endif %}
+        </div>
+    </div>
+
+</body>
+</html>
