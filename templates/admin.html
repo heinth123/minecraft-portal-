@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Create New Post | Admin</title>
+    <style>
+        body { background: #0f172a; color: #f8fafc; font-family: sans-serif; padding: 2rem; max-width: 600px; margin: 0 auto; }
+        .form-box { background: #1e293b; padding: 2rem; border-radius: 12px; }
+        h2 { color: #22c55e; margin-bottom: 1rem; }
+        label { display: block; margin-top: 1rem; color: #94a3b8; font-size: 0.9rem; }
+        input, select, textarea { width: 100%; padding: 0.8rem; margin-top: 0.4rem; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: white; }
+        button { margin-top: 1.5rem; width: 100%; padding: 1rem; background: #22c55e; border: none; font-weight: bold; border-radius: 6px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="form-box">
+        <h2>🚀 Create New Minecraft Post</h2>
+        <form method="POST">
+            <label>Post Title</label>
+            <input type="text" name="title" placeholder="e.g. Ultra Katana Addon v1.0" required>
+
+            <label>Category</label>
+            <select name="category">
+                <option value="Addon">Addon</option>
+                <option value="News">News</option>
+                <option value="Texture Pack">Texture Pack</option>
+                <option value="Map">Map</option>
+            </select>
+
+            <label>Image URL (Optional Preview Image)</label>
+            <input type="url" name="image_url" placeholder="https://i.imgur.com/example.png">
+
+            <label>Description</label>
+            <textarea name="description" rows="4" placeholder="Explain what this addon or update is about..." required></textarea>
+
+            <label>Download / Channel Link</label>
+            <input type="url" name="download_link" placeholder="https://t.me/minecraftmyanmar_addrons/123">
+
+            <button type="submit">Publish Live Post ✨</button>
+        </form>
+    </div>
+</body>
+</html>
