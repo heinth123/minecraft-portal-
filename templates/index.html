@@ -1,109 +1,68 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Minecraft Myanmar | Official Feed</title>
-    <style>
-        :root { --bg-dark: #0f172a; --card-bg: #1e293b; --green: #22c55e; --text-main: #f8fafc; --text-muted: #94a3b8; }
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, sans-serif; }
-        body { background-color: var(--bg-dark); color: var(--text-main); min-height: 100vh; }
-        nav { display: flex; justify-content: space-between; align-items: center; padding: 1rem 2rem; background: #1e293b; border-bottom: 1px solid #334155; }
-        .nav-links { display: flex; gap: 15px; }
-        .nav-links a { color: var(--text-main); text-decoration: none; font-weight: bold; }
-        .nav-links a.active { color: var(--green); }
-        .container { max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
-        .post-box { background: var(--card-bg); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem; border: 1px solid #38bdf8; }
-        input, textarea, select { width: 100%; padding: 0.8rem; background: #0f172a; border: 1px solid #334155; color: white; border-radius: 6px; margin-top: 0.5rem; }
-        button { padding: 0.6rem 1.2rem; background: var(--green); color: black; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 0.8rem; }
-        .badge-verified { color: #38bdf8; font-size: 0.9rem; }
-        .post-card { background: var(--card-bg); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; border: 1px solid #334155; }
-        .post-header { display: flex; align-items: center; gap: 10px; margin-bottom: 1rem; }
-        .pfp { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
-        .post-img { width: 100%; border-radius: 8px; margin-top: 1rem; max-height: 400px; object-fit: cover; }
-        .actions { display: flex; gap: 15px; margin-top: 1rem; align-items: center; }
-        .admin-box { background: #0f172a; padding: 0.8rem; border-radius: 8px; margin-top: 1rem; border: 1px dashed #38bdf8; }
-        .btn-download { display: inline-block; padding: 0.6rem 1.2rem; background: var(--green); color: black; text-decoration: none; font-weight: bold; border-radius: 6px; margin-top: 1rem; }
-    </style>
-</head>
-<body>
+{% extends "base.html" %}
 
-    <nav>
-        <span style="font-weight: bold; color: var(--green);">⛏️ Minecraft Myanmar</span>
-        <div class="nav-links">
-            <a href="/" class="active">🏠 Home</a>
-            <a href="/community">🌐 Community</a>
-            <a href="/chat">💬 Chat</a>
-            <a href="/profile/{{ current_user.username }}">👤 Profile</a>
-            <a href="/logout" style="color: #ef4444; margin-left: 10px;">Logout</a>
-        </div>
-    </nav>
+{% block content %}
+<div class="container">
+    <!-- Admin Post Form -->
+    {% if current_user.is_admin %}
+    <div class="card p-4 mb-4" style="border-color: #0ea5e9;">
+        <h4 class="text-info mb-3">📢 Publish Official Addon / Announcement</h4>
+        <form action="{{ url_for('create_post') }}" method="POST">
+            <input type="hidden" name="feed_type" value="official">
+            <div class="mb-3">
+                <input type="text" name="title" class="form-control" placeholder="Addon / News Title" required>
+            </div>
+            <div class="mb-3">
+                <textarea name="content" class="form-control" rows="3" placeholder="Description or update details..." required></textarea>
+            </div>
+            <div class="mb-3">
+                <input type="url" name="image_url" class="form-control" placeholder="Image Banner URL">
+            </div>
+            <div class="mb-3">
+                <input type="url" name="download_link" class="form-control" placeholder="Download Link (MediaFire / Google Drive)">
+            </div>
+            <button type="submit" class="btn btn-info text-white">Post to Official Main Feed 🚀</button>
+        </form>
+    </div>
+    {% endif %}
 
-    <div class="container">
-        <!-- Admin Official Post Creator -->
-        {% if current_user.is_admin %}
-        <div class="post-box">
-            <h3 style="color: #38bdf8;">📢 Publish Official Addon / Announcement</h3>
-            <form action="/create_post" method="POST">
-                <input type="hidden" name="feed_type" value="official">
-                <input type="text" name="title" placeholder="Addon / News Title" required>
-                <textarea name="content" placeholder="Description or update details..." rows="3" required></textarea>
-                <input type="text" name="image_url" placeholder="Image Banner URL">
-                <input type="text" name="download_link" placeholder="Download Link (MediaFire / Google Drive)">
-                <button type="submit" style="background: #38bdf8;">Post to Official Main Feed 🚀</button>
-            </form>
-        </div>
-        {% endif %}
+    <h3 class="mb-4">🏠 Official Main Feed</h3>
 
-        <h2>🏠 Official Main Feed</h2>
-        {% if not posts %}
-            <p style="color: var(--text-muted); margin-top: 1rem;">No official posts yet! Verified admins can post above. ⛏️</p>
-        {% endif %}
-
-        {% for post in posts %}
-        <div class="post-card">
-            <div class="post-header">
-                <img src="{{ post.user.pfp_url }}" class="pfp">
+    <!-- Feed Posts -->
+    {% for post in posts %}
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="d-flex align-items-center mb-3">
+                <a href="{{ url_for('profile', username=post.user.username) }}">
+                    <img src="{{ post.user.pfp_url }}" alt="pfp" class="rounded-circle me-2" style="width: 40px; height: 40px; object-fit: cover;">
+                </a>
                 <div>
-                    <a href="/profile/{{ post.user.username }}" style="color: white; text-decoration: none; font-weight: bold;">
-                        {{ post.user.nickname }} <span class="badge-verified">✔</span>
+                    <a href="{{ url_for('profile', username=post.user.username) }}" class="text-decoration-none text-white fw-bold">
+                        {{ post.user.nickname }}
                     </a>
-                    <div style="font-size: 0.75rem; color: var(--text-muted);">@{{ post.user.username }}</div>
+                    <small class="text-muted d-block">@{{ post.user.username }}</small>
                 </div>
             </div>
 
-            <h3>{{ post.title }}</h3>
-            <p style="margin-top: 0.5rem; color: #cbd5e1;">{{ post.content }}</p>
+            <h5>{{ post.title }}</h5>
+            <p>{{ post.content }}</p>
 
             {% if post.image_url %}
-                <img src="{{ post.image_url }}" class="post-img">
+            <img src="{{ post.image_url }}" class="img-fluid rounded mb-3" style="max-height: 400px; width: 100%; object-fit: cover;">
             {% endif %}
 
             {% if post.download_link %}
-                <br><a href="{{ post.download_link }}" target="_blank" class="btn-download">📥 Download Addon</a>
+            <a href="{{ post.download_link }}" target="_blank" class="btn btn-success btn-sm mb-3">⬇️ Download Addon</a>
             {% endif %}
 
-            <div class="actions">
-                <form action="/post/{{ post.id }}/like" method="POST" style="display:inline;">
-                    <button type="submit" style="background: transparent; color: #ef4444; border: 1px solid #ef4444; margin:0;">
-                        ❤️ {{ post.fake_likes or post.comments|length }}
-                    </button>
+            <div class="d-flex gap-2 align-items-center border-top border-secondary pt-2">
+                <form action="{{ url_for('like_post', post_id=post.id) }}" method="POST">
+                    <button type="submit" class="btn btn-sm btn-outline-danger">❤️ {{ post.fake_likes or post.likes|length }} Likes</button>
                 </form>
             </div>
-
-            <!-- Admin Fake Like Tool -->
-            {% if current_user.is_admin %}
-            <div class="admin-box">
-                <span style="color: #38bdf8; font-size: 0.8rem; font-weight: bold;">🪄 Admin Fake Likes Override</span>
-                <form action="/admin/fake_post_likes/{{ post.id }}" method="POST" style="display: flex; gap: 8px; margin-top: 5px;">
-                    <input type="text" name="fake_likes" placeholder="e.g. 2M or 3.5B" value="{{ post.fake_likes or '' }}" style="margin:0; padding:0.4rem;">
-                    <button type="submit" style="margin:0; padding: 0.4rem 0.8rem; background: #38bdf8;">Save</button>
-                </form>
-            </div>
-            {% endif %}
         </div>
-        {% endfor %}
     </div>
-
-</body>
-</html>
+    {% else %}
+    <p class="text-muted">No official posts yet! Verified admins can post above. ⛏️</p>
+    {% endfor %}
+</div>
+{% endblock %}
