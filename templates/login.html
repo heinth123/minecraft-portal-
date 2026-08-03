@@ -2,30 +2,40 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Admin Login | Minecraft Myanmar</title>
+    <title>Login | Minecraft Myanmar</title>
     <style>
-        body { background: #0f172a; color: #f8fafc; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .login-box { background: #1e293b; padding: 2rem; border-radius: 12px; width: 320px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
-        h2 { margin-bottom: 1rem; color: #22c55e; text-align: center; }
-        input { width: 100%; padding: 0.8rem; margin: 0.8rem 0; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: white; }
-        button { width: 100%; padding: 0.8rem; background: #22c55e; border: none; font-weight: bold; border-radius: 6px; cursor: pointer; }
-        .error { color: #ef4444; font-size: 0.9rem; text-align: center; }
+        body { background: #0f172a; color: #f8fafc; font-family: system-ui, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .card { background: #1e293b; padding: 2.5rem; border-radius: 16px; width: 340px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #334155; }
+        h2 { color: #22c55e; text-align: center; margin-bottom: 1rem; font-size: 1.8rem; }
+        label { color: #94a3b8; font-size: 0.85rem; display: block; margin-top: 1rem; }
+        input { width: 100%; padding: 0.8rem; margin-top: 0.4rem; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; box-sizing: border-box; }
+        button { width: 100%; padding: 0.8rem; background: #22c55e; border: none; font-weight: bold; border-radius: 8px; cursor: pointer; margin-top: 1.5rem; font-size: 1rem; color: #000; }
+        .link { text-align: center; margin-top: 1.2rem; font-size: 0.9rem; color: #94a3b8; }
+        .link a { color: #22c55e; text-decoration: none; font-weight: bold; }
     </style>
 </head>
 <body>
-    <div class="login-box">
-        <h2>🔒 Admin Login</h2>
+    <div class="card">
+        <h2>⛏️ Login</h2>
         {% with messages = get_flashed_messages(with_categories=true) %}
           {% if messages %}
-            {% for category, message in messages %}
-              <p class="error">{{ message }}</p>
+            {% for cat, msg in messages %}
+              <p style="color: #ef4444; font-size: 0.85rem; text-align: center;">{{ msg }}</p>
             {% endfor %}
           {% endif %}
         {% endwith %}
         <form method="POST">
-            <input type="password" name="password" placeholder="Enter Admin Password" required>
-            <button type="submit">Login</button>
+            <label>Username</label>
+            <input type="text" name="username" required>
+            
+            <label>Password</label>
+            <input type="password" name="password" required>
+            
+            <button type="submit">Login to Portal 🚀</button>
         </form>
+        <div class="link">
+            Don't have an account? <a href="/register">Register here</a>
+        </div>
     </div>
 </body>
 </html>
