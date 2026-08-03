@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <h2 class="text-info fw-bold mb-4">&gt;_ Admin Command Console ⚡</h2>
+
+    <div class="row">
+        <!-- Manage Players -->
+        <div class="col-md-6 mb-4">
+            <div class="card p-3">
+                <h4 class="text-success mb-3">👥 Override User Stats</h4>
+                {% for u in users %}
+                    <form action="{{ url_for('fake_stats', user_id=u.id) }}" method="POST" class="mb-3 p-2 border border-secondary rounded">
+                        <p class="fw-bold mb-1">@{{ u.username }} {% if u.is_admin %}(Admin 👑){% endif %}</p>
+                        <div class="row g-2">
+                            <div class="col">
+                                <input type="text" name="fake_followers" class="form-control form-control-sm" placeholder="Followers (e.g. 10K)" value="{{ u.fake_followers or '' }}">
+                            </div>
+                            <div class="col">
+                                <input type="text" name="fake_likes" class="form-control form-control-sm" placeholder="Likes (e.g. 50K)" value="{{ u.fake_likes or '' }}">
+                            </div>
+                            <div class="col-auto">
+                                <button type="submit" class="btn btn-primary btn-sm">Set</button>
+                            </div>
+                        </div>
+                    </form>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Manage Posts -->
+        <div class="col-md-6 mb-4">
+            <div class="card p-3">
+                <h4 class="text-warning mb-3">📝 Post Likes Override</h4>
+                {% for post in posts %}
+                    <form action="{{ url_for('fake_post_likes', post_id=post.id) }}" method="POST" class="mb-3 p-2 border border-secondary rounded">
+                        <p class="fw-bold mb-1">{{ post.title }} (by @{{ post.user.username }})</p>
+                        <div class="row g-2">
+                            <div class="col">
+                                <input type="text" name="fake_likes" class="form-control form-control-sm" placeholder="Fake Likes" value="{{ post.fake_likes or '' }}">
+                            </div>
+                            <div class="col-auto">
+                                <button type="submit" class="btn btn-warning btn-sm">Set Likes</button>
+                            </div>
+                        </div>
+                    </form>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
