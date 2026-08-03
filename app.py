@@ -46,7 +46,7 @@ class Friendship(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     receiver_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    status = db.Column(db.String(20), default='pending') # 'pending', 'accepted'
+    status = db.Column(db.String(20), default='pending')  # 'pending', 'accepted'
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     sender = db.relationship('User', foreign_keys=[sender_id], backref='sent_friend_requests')
@@ -56,7 +56,7 @@ class ProfileLike(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     giver_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     receiver_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    liked_date = db.Column(db.String(10), nullable=False) # Format: YYYY-MM-DD
+    liked_date = db.Column(db.String(10), nullable=False)  # Format: YYYY-MM-DD
 
 class Post(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -65,7 +65,7 @@ class Post(db.Model):
     image_url = db.Column(db.String(300), nullable=True)
     download_link = db.Column(db.String(300), nullable=True)
     category = db.Column(db.String(50), default="General")
-    feed_type = db.Column(db.String(20), default="community") # "official" or "community"
+    feed_type = db.Column(db.String(20), default="community")  # "official" or "community"
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     user = db.relationship('User', backref='posts')
@@ -303,7 +303,7 @@ def search_friends():
         all_other_users,
         key=lambda u: (u.is_admin, get_follower_count(u)),
         reverse=True
-    )[:5] # Top 5 recommended players
+    )[:5]  # Top 5 recommended players
 
     return render_template(
         'search_friends.html', 
@@ -382,9 +382,9 @@ def follow_user(user_id):
     if user_id != current_user.id:
         existing = Follow.query.filter_by(follower_id=current_user.id, followed_id=user_id).first()
         if existing:
-            db.session.delete(existing) # Unfollow
+            db.session.delete(existing)  # Unfollow
         else:
-            new_follow = Follow(follower_id=current_user.id, followed_id=user_id) # Follow
+            new_follow = Follow(follower_id=current_user.id, followed_id=user_id)  # Follow
             db.session.add(new_follow)
         db.session.commit()
     return redirect(request.referrer or url_for('home'))
