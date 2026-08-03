@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ user.nickname }}'s Profile</title>
+    <style>
+        :root { --bg-dark: #0f172a; --card-bg: #1e293b; --green: #22c55e; --text-main: #f8fafc; --text-muted: #94a3b8; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, sans-serif; }
+        body { background-color: var(--bg-dark); color: var(--text-main); min-height: 100vh; }
+        nav { display: flex; justify-content: space-between; align-items: center; padding: 1rem 2rem; background: #1e293b; border-bottom: 1px solid #334155; }
+        .nav-links { display: flex; gap: 15px; }
+        .nav-links a { color: var(--text-main); text-decoration: none; font-weight: bold; }
+        .container { max-width: 700px; margin: 2rem auto; padding: 0 1rem; }
+        .profile-card { background: var(--card-bg); border-radius: 16px; padding: 2rem; border: 1px solid #334155; text-align: center; }
+        .pfp-main { width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 3px solid var(--green); }
+        .badge-verified { color: #38bdf8; }
+        .stats { display: flex; justify-content: center; gap: 30px; margin: 1.5rem 0; }
+        .stat-box div:first-child { font-size: 1.4rem; font-weight: bold; color: var(--green); }
+        .stat-box div:last-child { font-size: 0.85rem; color: var(--text-muted); }
+        button { padding: 0.6rem 1.2rem; background: var(--green); color: black; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; margin: 5px; }
+        .admin-panel { background: #0f172a; border: 1px dashed #38bdf8; padding: 1rem; border-radius: 8px; margin-top: 1.5rem; text-align: left; }
+        input { width: 100%; padding: 0.6rem; background: #1e293b; border: 1px solid #334155; color: white; border-radius: 6px; margin-top: 4px; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <span style="font-weight: bold; color: var(--green);">⛏️ Minecraft Myanmar</span>
+        <div class="nav-links">
+            <a href="/">🏠 Home</a>
+            <a href="/community">🌐 Community</a>
+            <a href="/chat">💬 Chat</a>
+            <a href="/profile/{{ current_user.username }}">👤 Profile</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="profile-card">
+            <img src="{{ user.pfp_url }}" class="pfp-main">
+            <h2 style="margin-top: 10px;">
+                {{ user.nickname }}
+                {% if user.is_admin %}<span class="badge-verified">✔</span>{% endif %}
+            </h2>
+            <p style="color: var(--text-muted);">@{{ user.username }}</p>
+            <p style="margin-top: 10px;">{{ user.bio }}</p>
+
+            <div class="stats">
+                <div class="stat-box">
+                    <div>{{ followers_count }}</div>
+                    <div>Followers</div>
+                </div>
+                <div class="stat-box">
+                    <div>{{ profile_likes_count }}</div>
+                    <div>Profile Likes</div>
+                </div>
+            </div>
+
+            <!-- Follow & Daily Profile Like Buttons -->
+            {% if current_user.id != user.id %}
+                <form action="/user/{{ user.id }}/follow" method="POST" style="display:inline;">
+                    <button type="submit" style="background: {% if is_following %}#334155{% else %}var(--green){% endif %}; color: white;">
+                        {% if is_following %}Following{% else %}Follow +{% endif %}
+                    </button>
+                </form>
+
+                <form action="/user/{{ user.id }}/profile_like" method="POST" style="display:inline;">
+                    <button type="submit" style="background: #ef4444; color: white;">❤️ Like Profile Today</button>
+                </form>
+            {% endif %}
+
+            <!-- Edit Own Profile -->
+            {% if current_user.id == user.id %}
+                <details style="margin-top: 1.5rem; text-align: left; background: #0f172a; padding: 1rem; border-radius: 8px;">
+                    <summary style="cursor: pointer; color: var(--green); font-weight: bold;">✏️ Edit Profile</summary>
+                    <form action="/edit_profile" method="POST" style="margin-top: 10px;">
+                        <label style="font-size: 0.8rem; color: var(--text-muted);">Display Nickname</label>
+                        <input type="text" name="nickname" value="{{ user.nickname }}">
+                        
+                        <label style="font-size: 0.8rem; color: var(--text-muted);">Custom PFP Image URL</label>
+                        <input type="text" name="pfp_url" value="{{ user.pfp_url }}">
+                        
+                        <label style="font-size: 0.8rem; color: var(--text-muted);">Bio</label>
+                        <input type="text" name="bio" value="{{ user.bio }}">
+                        
+                        <button type="submit">Save Profile Changes</button>
+                    </form>
+                </details>
+            {% endif %}
+
+            <!-- Admin Fake Stats Boost -->
+            {% if current_user.is_admin %}
+                <div class="admin-panel">
+                    <h4 style="color: #38bdf8;">🪄 Admin Boost (Set Fake Stats)</h4>
+                    <form action="/admin/fake_stats/{{ user.id }}" method="POST">
+                        <label style="font-size: 0.8rem; color: var(--text-muted);">Fake Followers String (e.g. 1.2M)</label>
+                        <input type="text" name="fake_followers" value="{{ user.fake_followers or '' }}">
+
+                        <label style="font-size: 0.8rem; color: var(--text-muted);">Fake Profile Likes String (e.g. 3.5B)</label>
+                        <input type="text" name="fake_likes" value="{{ user.fake_likes or '' }}">
+
+                        <button type="submit" style="background: #38bdf8;">Apply Admin Override ⚡</button>
+                    </form>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+</body>
+</html>
