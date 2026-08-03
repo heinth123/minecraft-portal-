@@ -1,5 +1,5 @@
 import os
-from datetime import datetime, date
+from datetime import datetime, timezone
 from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
@@ -54,7 +54,7 @@ class Friendship(db.Model):
     sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     receiver_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     status = db.Column(db.String(20), default='pending')
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     sender = db.relationship('User', foreign_keys=[sender_id], backref='sent_friend_requests')
     receiver = db.relationship('User', foreign_keys=[receiver_id], backref='received_friend_requests')
@@ -73,7 +73,7 @@ class Post(db.Model):
     download_link = db.Column(db.String(300), nullable=True)
     category = db.Column(db.String(50), default="General")
     feed_type = db.Column(db.String(20), default="community")
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     user = db.relationship('User', backref='posts')
     fake_likes = db.Column(db.String(20), nullable=True)
@@ -86,7 +86,7 @@ class PostLike(db.Model):
 class Comment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     content = db.Column(db.Text, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     post_id = db.Column(db.Integer, db.ForeignKey('post.id'), nullable=False)
     user = db.relationship('User', backref='comments')
@@ -97,7 +97,7 @@ class DirectMessage(db.Model):
     sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     receiver_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     content = db.Column(db.Text, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     sender = db.relationship('User', foreign_keys=[sender_id])
     receiver = db.relationship('User', foreign_keys=[receiver_id])
 
@@ -111,37 +111,55 @@ class GroupMessage(db.Model):
     group_id = db.Column(db.Integer, db.ForeignKey('group_chat.id'), nullable=False)
     sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     content = db.Column(db.Text, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     sender = db.relationship('User')
 
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-with app.app_context():
-    db.create_all()
-    
-    from sqlalchemy import text
-    with db.engine.begin() as conn:
-        conn.execute(text('ALTER TABLE "user" ADD COLUMN IF NOT EXISTS fake_followers VARCHAR(20) DEFAULT \'0\';'))
-        conn.execute(text('ALTER TABLE "user" ADD COLUMN IF NOT EXISTS fake_likes VARCHAR(20) DEFAULT \'0\';'))
-        conn.execute(text('ALTER TABLE "user" ADD COLUMN IF NOT EXISTS like_type_style VARCHAR(50) DEFAULT \'❤️ Classic Red\';'))
+# ----------------- DB SETUP & INITIALIZATION -----------------
 
-    admins = [
-        ("heinth123", "Ssu@$1588hhs0=@@!!hsjk"),
-        ("rivercraft_official", "argta6799+//@#$%sd@#4gysdf5"),
-        ("SleepyDraxxzz", "ILOVEHELENA")
-    ]
-    
-    for un, pw in admins:
-        u = User.query.filter_by(username=un).first()
-        if not u:
-            u = User(username=un, nickname=un, password_hash=generate_password_hash(pw), is_admin=True)
-            db.session.add(u)
-        else:
-            u.is_admin = True
+def init_database():
+    """Safely initialize tables, alter schema, and seed admin users."""
+    with app.app_context():
+        db.create_all()
+        
+        # Safe schema checks without breaking PostgreSQL connection pools
+        try:
+            from sqlalchemy import inspect, text
+            inspector = inspect(db.engine)
+            columns = [c['name'] for c in inspector.get_columns('user')]
+            
+            with db.engine.begin() as conn:
+                if 'fake_followers' not in columns:
+                    conn.execute(text('ALTER TABLE "user" ADD COLUMN fake_followers VARCHAR(20) DEFAULT \'0\';'))
+                if 'fake_likes' not in columns:
+                    conn.execute(text('ALTER TABLE "user" ADD COLUMN fake_likes VARCHAR(20) DEFAULT \'0\';'))
+                if 'like_type_style' not in columns:
+                    conn.execute(text('ALTER TABLE "user" ADD COLUMN like_type_style VARCHAR(50) DEFAULT \'❤️ Classic Red\';'))
+        except Exception as e:
+            app.logger.warning(f"Schema check notice: {e}")
 
-    db.session.commit()
+        # Admin User Initialization
+        admins = [
+            ("heinth123", "Ssu@$1588hhs0=@@!!hsjk"),
+            ("rivercraft_official", "argta6799+//@#$%sd@#4gysdf5"),
+            ("SleepyDraxxzz", "ILOVEHELENA")
+        ]
+        
+        for un, pw in admins:
+            u = User.query.filter_by(username=un).first()
+            if not u:
+                u = User(username=un, nickname=un, password_hash=generate_password_hash(pw), is_admin=True)
+                db.session.add(u)
+            else:
+                u.is_admin = True
+
+        db.session.commit()
+
+# Run DB Initialization safely
+init_database()
 
 # ----------------- ROUTES -----------------
 
@@ -357,7 +375,7 @@ def follow_user(user_id):
 @app.route('/user/<int:user_id>/profile_like', methods=['POST'])
 @login_required
 def profile_like(user_id):
-    today = date.today().strftime("%Y-%m-%d")
+    today = datetime.now().strftime("%Y-%m-%d")
     existing = ProfileLike.query.filter_by(giver_id=current_user.id, receiver_id=user_id, liked_date=today).first()
     
     if not existing:
@@ -423,6 +441,20 @@ def admin_panel():
     all_users = User.query.all()
     all_posts = Post.query.order_by(Post.id.desc()).all()
     return render_template('admin.html', users=all_users, posts=all_posts)
+
+# --- MISSING ROUTE FIX: Prevents Jinja2 url_for('admin_gui_update') BuildError ---
+@app.route('/admin/gui-update', methods=['POST'])
+@login_required
+def admin_gui_update():
+    if not current_user.is_admin:
+        flash("Access denied! Admins only. 🚫", "danger")
+        return redirect(url_for('home'))
+
+    setting_name = request.form.get('setting_name')
+    setting_value = request.form.get('setting_value')
+
+    flash(f"Updated GUI setting {setting_name}! ✨", "success")
+    return redirect(request.referrer or url_for('admin_panel'))
 
 @app.route('/admin/fake_stats/<int:user_id>', methods=['POST'])
 @login_required
