@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Community | Minecraft Myanmar</title>
+    <style>
+        :root { --bg-dark: #0f172a; --card-bg: #1e293b; --green: #22c55e; --text-main: #f8fafc; --text-muted: #94a3b8; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, sans-serif; }
+        body { background-color: var(--bg-dark); color: var(--text-main); min-height: 100vh; }
+        nav { display: flex; justify-content: space-between; align-items: center; padding: 1rem 2rem; background: #1e293b; border-bottom: 1px solid #334155; }
+        .nav-links { display: flex; gap: 15px; }
+        .nav-links a { color: var(--text-main); text-decoration: none; font-weight: bold; }
+        .nav-links a.active { color: var(--green); }
+        .container { max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
+        .post-box { background: var(--card-bg); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem; border: 1px solid #334155; }
+        input, textarea { width: 100%; padding: 0.8rem; background: #0f172a; border: 1px solid #334155; color: white; border-radius: 6px; margin-top: 0.5rem; }
+        button { padding: 0.6rem 1.2rem; background: var(--green); color: black; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 0.8rem; }
+        .badge-verified { color: #38bdf8; font-size: 0.9rem; }
+        .post-card { background: var(--card-bg); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; border: 1px solid #334155; }
+        .post-header { display: flex; align-items: center; gap: 10px; margin-bottom: 1rem; }
+        .pfp { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
+        .post-img { width: 100%; border-radius: 8px; margin-top: 1rem; max-height: 400px; object-fit: cover; }
+        .actions { display: flex; gap: 15px; margin-top: 1rem; align-items: center; }
+        .admin-box { background: #0f172a; padding: 0.8rem; border-radius: 8px; margin-top: 1rem; border: 1px dashed #38bdf8; }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <span style="font-weight: bold; color: var(--green);">⛏️ Minecraft Myanmar</span>
+        <div class="nav-links">
+            <a href="/">🏠 Home</a>
+            <a href="/community" class="active">🌐 Community</a>
+            <a href="/chat">💬 Chat</a>
+            <a href="/profile/{{ current_user.username }}">👤 Profile</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Create Post Box -->
+        <div class="post-box">
+            <h3>🌐 Share with Community</h3>
+            <form action="/create_post" method="POST">
+                <input type="hidden" name="feed_type" value="community">
+                <input type="text" name="title" placeholder="Post Title" required>
+                <textarea name="content" placeholder="Share your Minecraft builds, addons, or thoughts..." rows="3" required></textarea>
+                <input type="text" name="image_url" placeholder="Image URL (optional)">
+                <button type="submit">Publish Post ✨</button>
+            </form>
+        </div>
+
+        <!-- Feed Posts -->
+        <h2>🌐 Community Feed</h2>
+        {% for post in posts %}
+        <div class="post-card">
+            <div class="post-header">
+                <img src="{{ post.user.pfp_url }}" class="pfp">
+                <div>
+                    <a href="/profile/{{ post.user.username }}" style="color: white; text-decoration: none; font-weight: bold;">
+                        {{ post.user.nickname }}
+                        {% if post.user.is_admin %}<span class="badge-verified">✔</span>{% endif %}
+                    </a>
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">@{{ post.user.username }}</div>
+                </div>
+            </div>
+
+            <h3>{{ post.title }}</h3>
+            <p style="margin-top: 0.5rem; color: #cbd5e1;">{{ post.content }}</p>
+
+            {% if post.image_url %}
+                <img src="{{ post.image_url }}" class="post-img">
+            {% endif %}
+
+            <div class="actions">
+                <form action="/post/{{ post.id }}/like" method="POST" style="display:inline;">
+                    <button type="submit" style="background: transparent; color: #ef4444; border: 1px solid #ef4444; margin:0;">
+                        ❤️ {{ post.fake_likes or post.comments|length }}
+                    </button>
+                </form>
+            </div>
+
+            <!-- Admin Fake Like Tool -->
+            {% if current_user.is_admin %}
+            <div class="admin-box">
+                <span style="color: #38bdf8; font-size: 0.8rem; font-weight: bold;">🪄 Admin Fake Likes Override</span>
+                <form action="/admin/fake_post_likes/{{ post.id }}" method="POST" style="display: flex; gap: 8px; margin-top: 5px;">
+                    <input type="text" name="fake_likes" placeholder="e.g. 2M or 3.5B" value="{{ post.fake_likes or '' }}" style="margin:0; padding:0.4rem;">
+                    <button type="submit" style="margin:0; padding: 0.4rem 0.8rem; background: #38bdf8;">Save</button>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+</body>
+</html>
