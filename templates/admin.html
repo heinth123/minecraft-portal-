@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container py-4">
+    <h2 class="fw-bold text-info mb-4">&gt;_ Admin Control Panel 🛠️</h2>
+
+    <!-- Manage Users & Fake Stats -->
+    <div class="card p-4 mb-4">
+        <h4 class="text-warning mb-3">👥 Player Management & Fake Stats</h4>
+        <div class="table-responsive">
+            <table class="table table-dark table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>User</th>
+                        <th>Role</th>
+                        <th>Followers Override</th>
+                        <th>Likes Override</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in users %}
+                    <tr>
+                        <td>
+                            <strong>{{ u.nickname }}</strong> <br>
+                            <small class="text-muted">@{{ u.username }}</small>
+                        </td>
+                        <td>
+                            {% if u.is_admin %}
+                                <span class="badge bg-danger">Admin 👑</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Player</span>
+                            {% endif %}
+                        </td>
+                        <form action="{{ url_for('fake_stats', user_id=u.id) }}" method="POST">
+                            <td>
+                                <input type="text" name="fake_followers" class="form-control form-control-sm" value="{{ u.fake_followers or '' }}" placeholder="Real count">
+                            </td>
+                            <td>
+                                <input type="text" name="fake_likes" class="form-control form-control-sm" value="{{ u.fake_likes or '' }}" placeholder="Real count">
+                            </td>
+                            <td>
+                                <button type="submit" class="btn btn-sm btn-primary">Save 🪄</button>
+                            </td>
+                        </form>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Manage Posts & Fake Likes -->
+    <div class="card p-4">
+        <h4 class="text-warning mb-3">📝 Post Fake Likes Override</h4>
+        <div class="table-responsive">
+            <table class="table table-dark table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Author</th>
+                        <th>Fake Likes Count</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in posts %}
+                    <tr>
+                        <td>{{ p.title }}</td>
+                        <td>@{{ p.user.username }}</td>
+                        <form action="{{ url_for('fake_post_likes', post_id=p.id) }}" method="POST">
+                            <td>
+                                <input type="text" name="fake_likes" class="form-control form-control-sm" value="{{ p.fake_likes or '' }}" placeholder="Real count">
+                            </td>
+                            <td>
+                                <button type="submit" class="btn btn-sm btn-primary">Save 🪄</button>
+                            </td>
+                        </form>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
