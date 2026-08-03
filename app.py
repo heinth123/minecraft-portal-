@@ -1,5 +1,4 @@
 import os
-import traceback
 from datetime import datetime, date
 from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
@@ -9,7 +8,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "minecraft_myanmar_super_secret_key_2026")
 
-# Database Configuration (Uses Supabase PostgreSQL if available, otherwise falls back to SQLite)
+# Database Configuration
 db_url = os.environ.get("DATABASE_URL", "sqlite:///minecraft_social.db")
 if db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
@@ -18,7 +17,6 @@ app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
-# Login Manager Configuration
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
@@ -34,12 +32,10 @@ class User(UserMixin, db.Model):
     bio = db.Column(db.String(200), default="Minecraft Myanmar Player ⛏️")
     is_admin = db.Column(db.Boolean, default=False)
     
-    # Fake Stat Overrides & Customization (Admins & Users)
     fake_followers = db.Column(db.String(20), nullable=True, default="0")
     fake_likes = db.Column(db.String(20), nullable=True, default="0")
     like_type_style = db.Column(db.String(50), nullable=True, default="❤️ Classic Red")
 
-    # Safe Getters to prevent Jinja2 template crashes
     @property
     def safe_pfp(self):
         return self.pfp_url or "https://placehold.co/150/1e293b/22c55e?text=Steve"
@@ -57,7 +53,7 @@ class Friendship(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     receiver_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    status = db.Column(db.String(20), default='pending')  # 'pending', 'accepted'
+    status = db.Column(db.String(20), default='pending')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     sender = db.relationship('User', foreign_keys=[sender_id], backref='sent_friend_requests')
@@ -67,7 +63,7 @@ class ProfileLike(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     giver_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     receiver_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    liked_date = db.Column(db.String(10), nullable=False)  # Format: YYYY-MM-DD
+    liked_date = db.Column(db.String(10), nullable=False)
 
 class Post(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -76,12 +72,10 @@ class Post(db.Model):
     image_url = db.Column(db.String(300), nullable=True)
     download_link = db.Column(db.String(300), nullable=True)
     category = db.Column(db.String(50), default="General")
-    feed_type = db.Column(db.String(20), default="community")  # "official" or "community"
+    feed_type = db.Column(db.String(20), default="community")
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     user = db.relationship('User', backref='posts')
-    
-    # Fake Like Override for Admins
     fake_likes = db.Column(db.String(20), nullable=True)
 
 class PostLike(db.Model):
@@ -124,48 +118,32 @@ class GroupMessage(db.Model):
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# ----------------- ERROR LOGGING -----------------
-
-@app.errorhandler(500)
-def internal_server_error(e):
-    print("================ 🚨 500 ERROR STACK TRACE 🚨 ================")
-    traceback.print_exc()
-    print("=============================================================")
-    return "Internal Server Error - Check Render Logs", 500
-
-# Initialize Database & Auto-Migrate Schema for Supabase
 with app.app_context():
     db.create_all()
     
-    # Safely inject missing columns directly into Supabase PostgreSQL
-    try:
-        from sqlalchemy import text
-        with db.engine.connect() as conn:
-            conn.execute(text('ALTER TABLE "user" ADD COLUMN IF NOT EXISTS fake_followers VARCHAR(20) DEFAULT \'0\';'))
-            conn.execute(text('ALTER TABLE "user" ADD COLUMN IF NOT EXISTS fake_likes VARCHAR(20) DEFAULT \'0\';'))
-            conn.execute(text('ALTER TABLE "user" ADD COLUMN IF NOT EXISTS like_type_style VARCHAR(50) DEFAULT \'❤️ Classic Red\';'))
-            conn.commit()
-    except Exception as e:
-        print(f"Auto-migration info: {e}")
+    from sqlalchemy import text
+    with db.engine.begin() as conn:
+        conn.execute(text('ALTER TABLE "user" ADD COLUMN IF NOT EXISTS fake_followers VARCHAR(20) DEFAULT \'0\';'))
+        conn.execute(text('ALTER TABLE "user" ADD COLUMN IF NOT EXISTS fake_likes VARCHAR(20) DEFAULT \'0\';'))
+        conn.execute(text('ALTER TABLE "user" ADD COLUMN IF NOT EXISTS like_type_style VARCHAR(50) DEFAULT \'❤️ Classic Red\';'))
 
-    # Pre-create Admin Users
     admins = [
         ("heinth123", "Ssu@$1588hhs0=@@!!hsjk"),
         ("rivercraft_official", "argta6799+//@#$%sd@#4gysdf5"),
-        ("SleepyDraxxzz", "ILOVEHELENA") # Brother 👑
+        ("SleepyDraxxzz", "ILOVEHELENA")
     ]
     
     for un, pw in admins:
         u = User.query.filter_by(username=un).first()
         if not u:
-            u = User(username=un, nickname=un, password_hash=generate_password_hash(pw, method="scrypt"), is_admin=True)
+            u = User(username=un, nickname=un, password_hash=generate_password_hash(pw), is_admin=True)
             db.session.add(u)
         else:
             u.is_admin = True
 
     db.session.commit()
 
-# ----------------- AUTH ROUTES -----------------
+# ----------------- ROUTES -----------------
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -204,7 +182,7 @@ def register():
             flash('Username already exists!', 'danger')
             return redirect(url_for('register'))
             
-        hashed_pw = generate_password_hash(password, method='scrypt')
+        hashed_pw = generate_password_hash(password)
         new_user = User(username=username, nickname=username, password_hash=hashed_pw)
         db.session.add(new_user)
         db.session.commit()
@@ -220,8 +198,6 @@ def register():
 def logout():
     logout_user()
     return redirect(url_for('login'))
-
-# ----------------- MAIN FEEDS -----------------
 
 @app.route('/')
 @login_required
@@ -262,8 +238,6 @@ def create_post():
         
     return redirect(url_for('home' if feed_type == 'official' else 'community'))
 
-# ----------------- SOCIAL ACTIONS & FRIENDS -----------------
-
 @app.route('/friends')
 @login_required
 def friends_list():
@@ -272,10 +246,7 @@ def friends_list():
         (Friendship.status == 'accepted')
     ).all()
 
-    friends = []
-    for f in friendships:
-        friends.append(f.receiver if f.sender_id == current_user.id else f.sender)
-
+    friends = [f.receiver if f.sender_id == current_user.id else f.sender for f in friendships]
     pending_requests = Friendship.query.filter_by(receiver_id=current_user.id, status='pending').all()
     all_users = User.query.filter(User.id != current_user.id).all()
 
@@ -295,10 +266,10 @@ def search_friends():
 
     all_other_users = User.query.filter(User.id != current_user.id).all()
     
-    def get_follower_count(user):
-        if user.fake_followers and str(user.fake_followers).isdigit():
-            return int(user.fake_followers)
-        return Follow.query.filter_by(followed_id=user.id).count()
+    def get_follower_count(u):
+        if u.fake_followers and str(u.fake_followers).isdigit():
+            return int(u.fake_followers)
+        return Follow.query.filter_by(followed_id=u.id).count()
 
     recommended_users = sorted(
         all_other_users,
@@ -306,29 +277,22 @@ def search_friends():
         reverse=True
     )[:5]
 
-    return render_template(
-        'search_friends.html', 
-        results=search_results, 
-        query=query, 
-        recommended=recommended_users
-    )
+    return render_template('search_friends.html', results=search_results, query=query, recommended=recommended_users)
 
 @app.route('/friend/send/<int:user_id>', methods=['POST'])
 @login_required
 def send_friend_request(user_id):
-    if user_id == current_user.id:
-        return redirect(request.referrer or url_for('friends_list'))
+    if user_id != current_user.id:
+        existing = Friendship.query.filter(
+            ((Friendship.sender_id == current_user.id) & (Friendship.receiver_id == user_id)) |
+            ((Friendship.sender_id == user_id) & (Friendship.receiver_id == current_user.id))
+        ).first()
 
-    existing = Friendship.query.filter(
-        ((Friendship.sender_id == current_user.id) & (Friendship.receiver_id == user_id)) |
-        ((Friendship.sender_id == user_id) & (Friendship.receiver_id == current_user.id))
-    ).first()
-
-    if not existing:
-        request_obj = Friendship(sender_id=current_user.id, receiver_id=user_id, status='pending')
-        db.session.add(request_obj)
-        db.session.commit()
-        flash('Friend request sent! 🤝', 'success')
+        if not existing:
+            request_obj = Friendship(sender_id=current_user.id, receiver_id=user_id, status='pending')
+            db.session.add(request_obj)
+            db.session.commit()
+            flash('Friend request sent! 🤝', 'success')
 
     return redirect(request.referrer or url_for('friends_list'))
 
@@ -406,8 +370,6 @@ def profile_like(user_id):
         
     return redirect(request.referrer or url_for('home'))
 
-# ----------------- PROFILES -----------------
-
 @app.route('/profile/<username>')
 @login_required
 def profile(username):
@@ -451,8 +413,6 @@ def edit_profile():
     flash('Profile updated! ✨', 'success')
     return redirect(url_for('profile', username=current_user.username))
 
-# ----------------- ADMIN DASHBOARD & OVERRIDES -----------------
-
 @app.route('/admin')
 @login_required
 def admin_panel():
@@ -490,8 +450,6 @@ def fake_post_likes(post_id):
     
     flash('Post fake likes applied! 🪄', 'success')
     return redirect(request.referrer or url_for('admin_panel'))
-
-# ----------------- MAILBOX / CHAT -----------------
 
 @app.route('/chat')
 @login_required
