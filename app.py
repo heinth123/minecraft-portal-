@@ -42,6 +42,16 @@ class Follow(db.Model):
     follower_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     followed_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
+class Friendship(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    receiver_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    status = db.Column(db.String(20), default='pending') # 'pending', 'accepted'
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    sender = db.relationship('User', foreign_keys=[sender_id], backref='sent_friend_requests')
+    receiver = db.relationship('User', foreign_keys=[receiver_id], backref='received_friend_requests')
+
 class ProfileLike(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     giver_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -231,7 +241,72 @@ def create_post():
         
     return redirect(url_for('home' if feed_type == 'official' else 'community'))
 
-# ----------------- SOCIAL ACTIONS (LIKE / COMMENT / FOLLOW) -----------------
+# ----------------- SOCIAL ACTIONS & FRIENDS -----------------
+
+@app.route('/friends')
+@login_required
+def friends_list():
+    # Fetch accepted friends
+    friendships = Friendship.query.filter(
+        ((Friendship.sender_id == current_user.id) | (Friendship.receiver_id == current_user.id)) &
+        (Friendship.status == 'accepted')
+    ).all()
+
+    friends = []
+    for f in friendships:
+        friends.append(f.receiver if f.sender_id == current_user.id else f.sender)
+
+    # Fetch incoming pending requests
+    pending_requests = Friendship.query.filter_by(receiver_id=current_user.id, status='pending').all()
+
+    # Discover other players
+    all_users = User.query.filter(User.id != current_user.id).all()
+
+    return render_template('friends.html', friends=friends, pending_requests=pending_requests, all_users=all_users)
+
+@app.route('/friend/send/<int:user_id>', methods=['POST'])
+@login_required
+def send_friend_request(user_id):
+    if user_id == current_user.id:
+        return redirect(request.referrer or url_for('friends_list'))
+
+    existing = Friendship.query.filter(
+        ((Friendship.sender_id == current_user.id) & (Friendship.receiver_id == user_id)) |
+        ((Friendship.sender_id == user_id) & (Friendship.receiver_id == current_user.id))
+    ).first()
+
+    if not existing:
+        request_obj = Friendship(sender_id=current_user.id, receiver_id=user_id, status='pending')
+        db.session.add(request_obj)
+        db.session.commit()
+        flash('Friend request sent! 🤝', 'success')
+
+    return redirect(request.referrer or url_for('friends_list'))
+
+@app.route('/friend/accept/<int:request_id>', methods=['POST'])
+@login_required
+def accept_friend_request(request_id):
+    friend_req = Friendship.query.get_or_404(request_id)
+    if friend_req.receiver_id == current_user.id:
+        friend_req.status = 'accepted'
+        db.session.commit()
+        flash('Friend request accepted! 🎉', 'success')
+    return redirect(request.referrer or url_for('friends_list'))
+
+@app.route('/friend/remove/<int:user_id>', methods=['POST'])
+@login_required
+def remove_friend(user_id):
+    friendship = Friendship.query.filter(
+        ((Friendship.sender_id == current_user.id) & (Friendship.receiver_id == user_id)) |
+        ((Friendship.sender_id == user_id) & (Friendship.receiver_id == current_user.id))
+    ).first()
+
+    if friendship:
+        db.session.delete(friendship)
+        db.session.commit()
+        flash('Friend removed.', 'info')
+
+    return redirect(request.referrer or url_for('friends_list'))
 
 @app.route('/post/<int:post_id>/like', methods=['POST'])
 @login_required
@@ -294,13 +369,20 @@ def profile(username):
     is_following = Follow.query.filter_by(follower_id=current_user.id, followed_id=user.id).first() is not None
     user_posts = Post.query.filter_by(user_id=user.id).order_by(Post.id.desc()).all()
     
+    # Check Friendship Status
+    friendship = Friendship.query.filter(
+        ((Friendship.sender_id == current_user.id) & (Friendship.receiver_id == user.id)) |
+        ((Friendship.sender_id == user.id) & (Friendship.receiver_id == current_user.id))
+    ).first()
+    
     return render_template(
         'profile.html',
         user=user,
         followers_count=user.fake_followers or real_followers,
         profile_likes_count=user.fake_likes or real_profile_likes,
         is_following=is_following,
-        user_posts=user_posts
+        user_posts=user_posts,
+        friendship=friendship
     )
 
 @app.route('/edit_profile', methods=['POST'])
