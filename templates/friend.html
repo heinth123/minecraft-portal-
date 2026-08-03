@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">👥 Your Friends & Requests</h2>
+
+    <!-- PENDING FRIEND REQUESTS SECTION -->
+    {% if pending_requests %}
+    <div class="card p-3 mb-4" style="background-color: #1e293b; border: 1px solid #eab308;">
+        <h4 class="text-warning mb-3">🔔 Pending Friend Requests ({{ pending_requests|length }})</h4>
+        <div class="list-group">
+            {% for req in pending_requests %}
+            <div class="list-group-item d-flex justify-content-between align-items-center" style="background-color: #0f172a;">
+                <div class="d-flex align-items-center">
+                    <a href="{{ url_for('profile', username=req.sender.username) }}">
+                        <img src="{{ req.sender.pfp_url }}" alt="PFP" class="rounded-circle me-3" style="width: 45px; height: 45px; object-fit: cover;">
+                    </a>
+                    <div>
+                        <a href="{{ url_for('profile', username=req.sender.username) }}" class="text-decoration-none text-white fw-bold">
+                            {{ req.sender.nickname }}
+                        </a>
+                        <small class="text-muted d-block">@{{ req.sender.username }}</small>
+                    </div>
+                </div>
+                <div>
+                    <form action="{{ url_for('accept_friend_request', request_id=req.id) }}" method="POST" class="d-inline">
+                        <button type="submit" class="btn btn-sm btn-success">Accept ✅</button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ACCEPTED FRIENDS LIST -->
+    <div class="card p-3 mb-4" style="background-color: #1e293b; border: 1px solid #334155;">
+        <h4 class="text-success mb-3">🤝 My Friends ({{ friends|length }})</h4>
+        {% if friends %}
+        <div class="list-group">
+            {% for friend in friends %}
+            <div class="list-group-item d-flex justify-content-between align-items-center" style="background-color: #0f172a;">
+                <div class="d-flex align-items-center">
+                    <a href="{{ url_for('profile', username=friend.username) }}">
+                        <img src="{{ friend.pfp_url }}" alt="PFP" class="rounded-circle me-3" style="width: 45px; height: 45px; object-fit: cover;">
+                    </a>
+                    <div>
+                        <a href="{{ url_for('profile', username=friend.username) }}" class="text-decoration-none text-white fw-bold">
+                            {{ friend.nickname }}
+                        </a>
+                        <small class="text-muted d-block">@{{ friend.username }}</small>
+                    </div>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="{{ url_for('dm', receiver_id=friend.id) }}" class="btn btn-sm btn-primary">💬 Chat</a>
+                    <form action="{{ url_for('remove_friend', user_id=friend.id) }}" method="POST">
+                        <button type="submit" class="btn btn-sm btn-outline-danger">Remove ❌</button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-muted">You haven't added any friends yet! Head over to <a href="{{ url_for('search_friends') }}" class="text-info">Find Friends</a> to start connecting! 🚀</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
