@@ -277,7 +277,26 @@ def search_friends():
             User.id != current_user.id
         ).all()
 
-    return render_template('search_friends.html', results=search_results, query=query)
+    # 🌟 FETCH RECOMMENDED USERS (Sorted by Admins First, then Most Followers) 🌟
+    all_other_users = User.query.filter(User.id != current_user.id).all()
+    
+    def get_follower_count(user):
+        if user.fake_followers and user.fake_followers.isdigit():
+            return int(user.fake_followers)
+        return Follow.query.filter_by(followed_id=user.id).count()
+
+    recommended_users = sorted(
+        all_other_users,
+        key=lambda u: (u.is_admin, get_follower_count(u)),
+        reverse=True
+    )[:5] # Top 5 recommended players
+
+    return render_template(
+        'search_friends.html', 
+        results=search_results, 
+        query=query, 
+        recommended=recommended_users
+    )
 
 @app.route('/friend/send/<int:user_id>', methods=['POST'])
 @login_required
