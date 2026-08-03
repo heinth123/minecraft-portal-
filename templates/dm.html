@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat with {{ receiver.nickname }} | Minecraft Myanmar</title>
+    <style>
+        :root { --bg-dark: #0f172a; --card-bg: #1e293b; --green: #22c55e; --text-main: #f8fafc; --text-muted: #94a3b8; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, sans-serif; }
+        body { background-color: var(--bg-dark); color: var(--text-main); min-height: 100vh; display: flex; flex-direction: column; }
+        nav { display: flex; justify-content: space-between; align-items: center; padding: 1rem 2rem; background: #1e293b; border-bottom: 1px solid #334155; }
+        .nav-links { display: flex; gap: 15px; }
+        .nav-links a { color: var(--text-main); text-decoration: none; font-weight: bold; }
+        
+        .chat-container { max-width: 700px; width: 100%; margin: 1.5rem auto; background: var(--card-bg); border-radius: 12px; border: 1px solid #334155; display: flex; flex-direction: column; height: 75vh; }
+        .chat-header { padding: 1rem; border-bottom: 1px solid #334155; display: flex; align-items: center; gap: 12px; background: #0f172a; border-radius: 12px 12px 0 0; }
+        .pfp { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
+        .badge-verified { color: #38bdf8; }
+        
+        .messages-box { flex-grow: 1; padding: 1rem; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+        .msg { max-width: 70%; padding: 0.8rem 1rem; border-radius: 12px; font-size: 0.95rem; word-break: break-word; }
+        .msg-sent { background: var(--green); color: black; align-self: flex-end; border-bottom-right-radius: 2px; font-weight: 500; }
+        .msg-received { background: #334155; color: white; align-self: flex-start; border-bottom-left-radius: 2px; }
+        
+        .chat-input-form { padding: 1rem; border-top: 1px solid #334155; display: flex; gap: 10px; background: #0f172a; border-radius: 0 0 12px 12px; }
+        input { flex-grow: 1; padding: 0.8rem; background: #1e293b; border: 1px solid #334155; color: white; border-radius: 8px; font-size: 0.95rem; }
+        button { padding: 0.8rem 1.5rem; background: var(--green); color: black; border: none; font-weight: bold; border-radius: 8px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <span style="font-weight: bold; color: var(--green);">⛏️ Minecraft Myanmar</span>
+        <div class="nav-links">
+            <a href="/">🏠 Home</a>
+            <a href="/community">🌐 Community</a>
+            <a href="/chat" style="color: var(--green);">💬 Chat</a>
+            <a href="/profile/{{ current_user.username }}">👤 Profile</a>
+        </div>
+    </nav>
+
+    <div class="chat-container">
+        <!-- Chat Header -->
+        <div class="chat-header">
+            <a href="/chat" style="color: var(--text-muted); text-decoration: none; font-size: 1.2rem; margin-right: 5px;">⬅️</a>
+            <img src="{{ receiver.pfp_url }}" class="pfp">
+            <div>
+                <div style="font-weight: bold; font-size: 1.05rem;">
+                    {{ receiver.nickname }}
+                    {% if receiver.is_admin %}<span class="badge-verified">✔</span>{% endif %}
+                </div>
+                <div style="font-size: 0.75rem; color: var(--text-muted);">@{{ receiver.username }}</div>
+            </div>
+        </div>
+
+        <!-- Messages Area -->
+        <div class="messages-box">
+            {% if not messages %}
+                <p style="text-align: center; color: var(--text-muted); margin-auto: 0;">No messages yet. Say hi! 👋</p>
+            {% endif %}
+
+            {% for msg in messages %}
+                <div class="msg {% if msg.sender_id == current_user.id %}msg-sent{% else %}msg-received{% endif %}">
+                    {{ msg.content }}
+                </div>
+            {% endfor %}
+        </div>
+
+        <!-- Send Message Form -->
+        <form class="chat-input-form" method="POST">
+            <input type="text" name="content" placeholder="Write a message..." required autocomplete="off">
+            <button type="submit">Send 🚀</button>
+        </form>
+    </div>
+
+</body>
+</html>
