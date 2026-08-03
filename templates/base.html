@@ -11,18 +11,66 @@
             background-color: #0f172a;
             color: #f8fafc;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow-x: hidden;
         }
-        .navbar {
-            background-color: #1e293b !important;
-            border-bottom: 1px solid #334155;
+
+        /* 🌟 SIDEBAR STYLING */
+        .sidebar {
+            width: 250px;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            background-color: #1e293b;
+            border-right: 1px solid #334155;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            z-index: 1000;
         }
-        .nav-link {
+
+        .sidebar .nav-link {
             color: #cbd5e1 !important;
             font-weight: 500;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.2s ease;
         }
-        .nav-link:hover {
+
+        .sidebar .nav-link:hover {
+            background-color: #334155;
             color: #22c55e !important;
         }
+
+        .sidebar .nav-link.active {
+            background-color: #22c55e;
+            color: #ffffff !important;
+        }
+
+        /* >_ Admin Button Styling */
+        .admin-link {
+            background-color: #0284c7 !important;
+            color: #ffffff !important;
+            font-family: monospace;
+            font-weight: bold;
+        }
+        .admin-link:hover {
+            background-color: #0369a1 !important;
+        }
+
+        /* 🌟 MAIN CONTENT WRAPPER (Shifted right for sidebar) */
+        .main-content {
+            margin-left: 250px;
+            padding: 30px;
+            min-height: 100vh;
+        }
+
+        /* Cards and Inputs styling */
         .card {
             background-color: #1e293b;
             border: 1px solid #334155;
@@ -44,81 +92,87 @@
             border-color: #334155;
             color: #f8fafc;
         }
-        /* Custom Admin Button Glow Effect */
-        .btn-admin {
-            background-color: #0284c7;
-            color: #ffffff;
-            font-family: monospace;
-            font-weight: bold;
-        }
-        .btn-admin:hover {
-            background-color: #0369a1;
-            color: #ffffff;
+
+        /* Mobile Responsive adjustment */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+            }
+            .main-content {
+                margin-left: 0;
+            }
         }
     </style>
 </head>
 <body>
 
-    <!-- TOP NAVIGATION BAR -->
-    <nav class="navbar navbar-expand-lg navbar-dark mb-4">
-        <div class="container">
-            <a class="navbar-brand fw-bold text-success" href="{{ url_for('home') }}">⛏️ Minecraft Myanmar</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto align-items-center gap-2">
-                    {% if current_user.is_authenticated %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('home') }}">🏠 Home</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('community') }}">🌐 Community</a>
-                        </li>
-                        
-                        <!-- ✉️ MAILBOX / CHAT LINK -->
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('chat') }}">✉️ Mailbox</a>
-                        </li>
+    <!-- 📌 LEFT SIDEBAR NAVIGATION -->
+    <div class="sidebar">
+        <div>
+            <!-- Brand Header -->
+            <a href="{{ url_for('home') }}" class="text-decoration-none">
+                <h4 class="fw-bold text-success mb-4 fs-5">⛏️ Minecraft Myanmar</h4>
+            </a>
 
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('friends_list') }}">👥 Friends</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('search_friends') }}">🔍 Find Friends</a>
-                        </li>
+            <!-- Navigation Links -->
+            <ul class="nav nav-pills flex-column">
+                {% if current_user.is_authenticated %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('home') }}">🏠 Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('community') }}">🌐 Community</a>
+                    </li>
+                    
+                    <!-- ✉️ MAILBOX SIDEBAR LINK -->
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('chat') }}">✉️ Mailbox</a>
+                    </li>
 
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('profile', username=current_user.username) }}">👤 Profile</a>
-                        </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('friends_list') }}">👥 Friends</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('search_friends') }}">🔍 Find Friends</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('profile', username=current_user.username) }}">👤 Profile</a>
+                    </li>
 
-                        <!-- >_ ADMIN OVERRIDE BUTTON (Shows ONLY for Admin accounts) -->
-                        {% if current_user.is_admin %}
-                            <li class="nav-item ms-1">
-                                <a class="btn btn-admin btn-sm" href="{{ url_for('profile', username=current_user.username) }}">
-                                    &gt;_ Admin Tools
-                                </a>
-                            </li>
-                        {% endif %}
-
-                        <li class="nav-item ms-2">
-                            <a class="btn btn-outline-danger btn-sm" href="{{ url_for('logout') }}">Logout</a>
-                        </li>
-                    {% else %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('login') }}">Login</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="btn btn-success btn-sm" href="{{ url_for('register') }}">Register</a>
+                    <!-- >_ ADMIN OVERRIDE BUTTON (Only for Admins) -->
+                    {% if current_user.is_admin %}
+                        <li class="nav-item mt-3">
+                            <a class="nav-link admin-link" href="{{ url_for('profile', username=current_user.username) }}">
+                                &gt;_ Admin Tools
+                            </a>
                         </li>
                     {% endif %}
-                </ul>
-            </div>
+                {% else %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('login') }}">Login</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link text-success fw-bold" href="{{ url_for('register') }}">Register</a>
+                    </li>
+                {% endif %}
+            </ul>
         </div>
-    </nav>
 
-    <!-- MAIN CONTENT INJECTED HERE -->
-    <div class="container pb-5">
+        <!-- User Quick Actions / Logout at Bottom of Sidebar -->
+        {% if current_user.is_authenticated %}
+            <div class="pt-3 border-top border-secondary">
+                <div class="d-flex align-items-center justify-content-between">
+                    <span class="small text-muted">@{{ current_user.username }}</span>
+                    <a class="btn btn-outline-danger btn-sm" href="{{ url_for('logout') }}">Logout</a>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- 📦 MAIN PAGE CONTENT -->
+    <div class="main-content">
         <!-- Flash Messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
