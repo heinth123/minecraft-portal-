@@ -264,6 +264,21 @@ def friends_list():
 
     return render_template('friends.html', friends=friends, pending_requests=pending_requests, all_users=all_users)
 
+@app.route('/search_friends', methods=['GET'])
+@login_required
+def search_friends():
+    query = request.args.get('query', '').strip()
+    search_results = []
+    
+    if query:
+        # Search users by username or nickname (excluding current user)
+        search_results = User.query.filter(
+            ((User.username.ilike(f"%{query}%")) | (User.nickname.ilike(f"%{query}%"))),
+            User.id != current_user.id
+        ).all()
+
+    return render_template('search_friends.html', results=search_results, query=query)
+
 @app.route('/friend/send/<int:user_id>', methods=['POST'])
 @login_required
 def send_friend_request(user_id):
