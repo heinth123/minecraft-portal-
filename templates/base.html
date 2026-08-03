@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minecraft Myanmar</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #0f172a;
+            color: #f8fafc;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .navbar {
+            background-color: #1e293b !important;
+            border-bottom: 1px solid #334155;
+        }
+        .nav-link {
+            color: #cbd5e1 !important;
+            font-weight: 500;
+        }
+        .nav-link:hover {
+            color: #22c55e !important;
+        }
+        .card {
+            background-color: #1e293b;
+            border: 1px solid #334155;
+            color: #f8fafc;
+        }
+        .form-control, .form-select {
+            background-color: #0f172a;
+            border: 1px solid #334155;
+            color: #f8fafc;
+        }
+        .form-control:focus, .form-select:focus {
+            background-color: #0f172a;
+            color: #f8fafc;
+            border-color: #22c55e;
+            box-shadow: none;
+        }
+        .list-group-item {
+            background-color: #1e293b;
+            border-color: #334155;
+            color: #f8fafc;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- TOP NAVIGATION BAR -->
+    <nav class="navbar navbar-expand-lg navbar-dark mb-4">
+        <div class="container">
+            <a class="navbar-brand fw-bold text-success" href="{{ url_for('home') }}">⛏️ Minecraft Myanmar</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto align-items-center gap-2">
+                    {% if current_user.is_authenticated %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('home') }}">🏠 Home</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('community') }}">🌐 Community</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('chat') }}">💬 Chat</a>
+                        </li>
+
+                        <!-- NEW FRIEND LINKS HERE! 👇 -->
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('friends_list') }}">👥 Friends</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('search_friends') }}">🔍 Find Friends</a>
+                        </li>
+
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('profile', username=current_user.username) }}">👤 Profile</a>
+                        </li>
+                        <li class="nav-item ms-2">
+                            <a class="btn btn-outline-danger btn-sm" href="{{ url_for('logout') }}">Logout</a>
+                        </li>
+                    {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('login') }}">Login</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="btn btn-success btn-sm" href="{{ url_for('register') }}">Register</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- MAIN CONTENT INJECTED HERE -->
+    <div class="container pb-5">
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
