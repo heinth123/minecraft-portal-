@@ -10,33 +10,71 @@
         <button type="submit" class="btn btn-primary">Search</button>
     </form>
 
-    <!-- Search Results List -->
+    <!-- 🌟 MOST RECOMMENDED PLAYERS (TOP FOLLOWERS & ADMINS) 🌟 -->
+    <div class="card p-3 mb-4" style="background-color: #1e293b; border: 1px solid #3b82f6;">
+        <h4 class="text-warning mb-3">⭐ Recommended Players to Add</h4>
+        <div class="list-group">
+            {% for user in recommended %}
+                <div class="list-group-item d-flex justify-content-between align-items-center" style="background-color: #0f172a;">
+                    <div class="d-flex align-items-center">
+                        <a href="{{ url_for('profile', username=user.username) }}">
+                            <img src="{{ user.pfp_url }}" alt="PFP" class="rounded-circle me-3" style="width: 50px; height: 50px; object-fit: cover; border: 2px solid #22c55e;">
+                        </a>
+                        <div>
+                            <a href="{{ url_for('profile', username=user.username) }}" class="text-decoration-none text-white">
+                                <strong>{{ user.nickname }}</strong> <small class="text-muted">(@{{ user.username }})</small>
+                            </a>
+                            
+                            <!-- 👑 ADMINISTRATOR TITLE BADGE -->
+                            {% if user.is_admin %}
+                                <div>
+                                    <span class="badge bg-danger mt-1">👑 Administrator</span>
+                                </div>
+                            {% else %}
+                                <div>
+                                    <small class="text-info">Popular Player 🔥</small>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex gap-2">
+                        <a href="{{ url_for('profile', username=user.username) }}" class="btn btn-sm btn-outline-primary">
+                            👁️ View
+                        </a>
+                        <form action="{{ url_for('send_friend_request', user_id=user.id) }}" method="POST">
+                            <button type="submit" class="btn btn-sm btn-success">+ Friend 🤝</button>
+                        </form>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Search Results List (Only shows when searching) -->
     {% if query %}
         <h4>Search Results for "{{ query }}"</h4>
         <ul class="list-group mt-3">
             {% for user in results %}
                 <li class="list-group-item d-flex justify-content-between align-items-center">
                     <div class="d-flex align-items-center">
-                        <!-- Clickable Profile Picture -->
                         <a href="{{ url_for('profile', username=user.username) }}">
                             <img src="{{ user.pfp_url }}" alt="PFP" class="rounded-circle me-3" style="width: 45px; height: 45px; object-fit: cover;">
                         </a>
                         <div>
-                            <!-- Clickable Username & Nickname -->
-                            <a href="{{ url_for('profile', username=user.username) }}" class="text-decoration-none text-dark">
+                            <a href="{{ url_for('profile', username=user.username) }}" class="text-decoration-none text-white">
                                 <strong>{{ user.nickname }}</strong> <small class="text-muted">(@{{ user.username }})</small>
                             </a>
-                            <p class="mb-0 text-muted small">{{ user.bio }}</p>
+                            {% if user.is_admin %}
+                                <div><span class="badge bg-danger">👑 Administrator</span></div>
+                            {% endif %}
                         </div>
                     </div>
                     
                     <div class="d-flex gap-2">
-                        <!-- View Profile Button (Works for everyone!) -->
                         <a href="{{ url_for('profile', username=user.username) }}" class="btn btn-sm btn-outline-primary">
                             👁️ View Profile
                         </a>
-
-                        <!-- Send Friend Request Button -->
                         <form action="{{ url_for('send_friend_request', user_id=user.id) }}" method="POST">
                             <button type="submit" class="btn btn-sm btn-success">+ Friend 🤝</button>
                         </form>
