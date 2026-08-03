@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Register | Minecraft Myanmar</title>
+    <style>
+        body { background: #0f172a; color: #f8fafc; font-family: system-ui, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .card { background: #1e293b; padding: 2.5rem; border-radius: 16px; width: 340px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #334155; }
+        h2 { color: #22c55e; text-align: center; margin-bottom: 1rem; font-size: 1.8rem; }
+        label { color: #94a3b8; font-size: 0.85rem; display: block; margin-top: 1rem; }
+        input { width: 100%; padding: 0.8rem; margin-top: 0.4rem; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; box-sizing: border-box; }
+        button { width: 100%; padding: 0.8rem; background: #22c55e; border: none; font-weight: bold; border-radius: 8px; cursor: pointer; margin-top: 1.5rem; font-size: 1rem; color: #000; }
+        .link { text-align: center; margin-top: 1.2rem; font-size: 0.9rem; color: #94a3b8; }
+        .link a { color: #22c55e; text-decoration: none; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>🎮 Register</h2>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for cat, msg in messages %}
+              <p style="color: #ef4444; font-size: 0.85rem; text-align: center;">{{ msg }}</p>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+        <form method="POST">
+            <label>New Username</label>
+            <input type="text" name="username" required>
+            
+            <label>New Password</label>
+            <input type="password" name="password" required>
+
+            <label>Confirm Password</label>
+            <input type="password" name="confirm_password" required>
+            
+            <button type="submit">Create Account 🎉</button>
+        </form>
+        <div class="link">
+            Already registered? <a href="/login">Login here</a>
+        </div>
+    </div>
+</body>
+</html>
