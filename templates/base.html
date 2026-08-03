@@ -44,6 +44,17 @@
             border-color: #334155;
             color: #f8fafc;
         }
+        /* Custom Admin Button Glow Effect */
+        .btn-admin {
+            background-color: #0284c7;
+            color: #ffffff;
+            font-family: monospace;
+            font-weight: bold;
+        }
+        .btn-admin:hover {
+            background-color: #0369a1;
+            color: #ffffff;
+        }
     </style>
 </head>
 <body>
@@ -64,11 +75,12 @@
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('community') }}">🌐 Community</a>
                         </li>
+                        
+                        <!-- ✉️ MAILBOX / CHAT LINK -->
                         <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('chat') }}">💬 Chat</a>
+                            <a class="nav-link" href="{{ url_for('chat') }}">✉️ Mailbox</a>
                         </li>
 
-                        <!-- NEW FRIEND LINKS HERE! 👇 -->
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('friends_list') }}">👥 Friends</a>
                         </li>
@@ -79,6 +91,16 @@
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('profile', username=current_user.username) }}">👤 Profile</a>
                         </li>
+
+                        <!-- >_ ADMIN OVERRIDE BUTTON (Shows ONLY for Admin accounts) -->
+                        {% if current_user.is_admin %}
+                            <li class="nav-item ms-1">
+                                <a class="btn btn-admin btn-sm" href="{{ url_for('profile', username=current_user.username) }}">
+                                    &gt;_ Admin Tools
+                                </a>
+                            </li>
+                        {% endif %}
+
                         <li class="nav-item ms-2">
                             <a class="btn btn-outline-danger btn-sm" href="{{ url_for('logout') }}">Logout</a>
                         </li>
