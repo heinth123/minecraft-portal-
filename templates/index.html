@@ -3,85 +3,106 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Minecraft Myanmar | Official Portal</title>
+    <title>Minecraft Myanmar | Official Feed</title>
     <style>
-        :root {
-            --bg-dark: #0f172a;
-            --card-bg: #1e293b;
-            --green: #22c55e;
-            --green-hover: #16a34a;
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
-        }
-
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
-        body { background-color: var(--bg-dark); color: var(--text-main); display: flex; flex-direction: column; min-height: 100vh; }
-
-        header { padding: 2rem 1rem; text-align: center; background: linear-gradient(180deg, rgba(34,197,94,0.15) 0%, transparent 100%); }
-        .logo { font-size: 2.5rem; color: var(--green); text-shadow: 0 0 15px rgba(34,197,94,0.4); text-transform: uppercase; font-weight: 800; }
-        
-        .container { max-width: 1000px; margin: 0 auto; padding: 1.5rem; width: 100%; }
-        
-        .community-box { background: var(--card-bg); padding: 1.5rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 2rem; text-align: center; }
-        .btn-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem; }
-        .btn { display: inline-block; padding: 0.8rem 1.2rem; background: var(--green); color: #000; font-weight: bold; border-radius: 8px; text-decoration: none; transition: 0.2s; }
-        .btn:hover { background: var(--green-hover); transform: translateY(-2px); }
-
-        .posts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; }
-        .post-card { background: var(--card-bg); border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; }
-        .post-img { width: 100%; height: 180px; object-fit: cover; }
-        .post-body { padding: 1.2rem; display: flex; flex-direction: column; flex-grow: 1; }
-        .category-badge { background: rgba(34,197,94,0.2); color: var(--green); padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; width: fit-content; margin-bottom: 0.5rem; }
-        .post-title { font-size: 1.3rem; margin-bottom: 0.5rem; }
-        .post-desc { color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1rem; flex-grow: 1; }
-
-        nav { display: flex; justify-content: flex-end; padding: 1rem 2rem; }
-        .admin-link { color: var(--text-muted); text-decoration: none; font-size: 0.9rem; }
-        .admin-link:hover { color: var(--green); }
+        :root { --bg-dark: #0f172a; --card-bg: #1e293b; --green: #22c55e; --text-main: #f8fafc; --text-muted: #94a3b8; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, sans-serif; }
+        body { background-color: var(--bg-dark); color: var(--text-main); min-height: 100vh; }
+        nav { display: flex; justify-content: space-between; align-items: center; padding: 1rem 2rem; background: #1e293b; border-bottom: 1px solid #334155; }
+        .nav-links { display: flex; gap: 15px; }
+        .nav-links a { color: var(--text-main); text-decoration: none; font-weight: bold; }
+        .nav-links a.active { color: var(--green); }
+        .container { max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
+        .post-box { background: var(--card-bg); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem; border: 1px solid #38bdf8; }
+        input, textarea, select { width: 100%; padding: 0.8rem; background: #0f172a; border: 1px solid #334155; color: white; border-radius: 6px; margin-top: 0.5rem; }
+        button { padding: 0.6rem 1.2rem; background: var(--green); color: black; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 0.8rem; }
+        .badge-verified { color: #38bdf8; font-size: 0.9rem; }
+        .post-card { background: var(--card-bg); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; border: 1px solid #334155; }
+        .post-header { display: flex; align-items: center; gap: 10px; margin-bottom: 1rem; }
+        .pfp { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
+        .post-img { width: 100%; border-radius: 8px; margin-top: 1rem; max-height: 400px; object-fit: cover; }
+        .actions { display: flex; gap: 15px; margin-top: 1rem; align-items: center; }
+        .admin-box { background: #0f172a; padding: 0.8rem; border-radius: 8px; margin-top: 1rem; border: 1px dashed #38bdf8; }
+        .btn-download { display: inline-block; padding: 0.6rem 1.2rem; background: var(--green); color: black; text-decoration: none; font-weight: bold; border-radius: 6px; margin-top: 1rem; }
     </style>
 </head>
 <body>
 
     <nav>
-        <a href="/login" class="admin-link">🔒 Admin Login</a>
+        <span style="font-weight: bold; color: var(--green);">⛏️ Minecraft Myanmar</span>
+        <div class="nav-links">
+            <a href="/" class="active">🏠 Home</a>
+            <a href="/community">🌐 Community</a>
+            <a href="/chat">💬 Chat</a>
+            <a href="/profile/{{ current_user.username }}">👤 Profile</a>
+            <a href="/logout" style="color: #ef4444; margin-left: 10px;">Logout</a>
+        </div>
     </nav>
 
-    <header>
-        <h1 class="logo">⛏️ Minecraft Myanmar</h1>
-        <p style="color: var(--text-muted);">Addons, Mods, News & Community Hub</p>
-    </header>
-
     <div class="container">
-        <!-- Community Links -->
-        <div class="community-box">
-            <h2>📢 Join Our Official Community</h2>
-            <div class="btn-grid">
-                <a href="https://t.me/minecraftmyanmar_addrons" target="_blank" class="btn">📲 Telegram Channel</a>
-                <a href="https://t.me/minecraftmyanmar_chat" target="_blank" class="btn">💬 Telegram Group</a>
-            </div>
+        <!-- Admin Official Post Creator -->
+        {% if current_user.is_admin %}
+        <div class="post-box">
+            <h3 style="color: #38bdf8;">📢 Publish Official Addon / Announcement</h3>
+            <form action="/create_post" method="POST">
+                <input type="hidden" name="feed_type" value="official">
+                <input type="text" name="title" placeholder="Addon / News Title" required>
+                <textarea name="content" placeholder="Description or update details..." rows="3" required></textarea>
+                <input type="text" name="image_url" placeholder="Image Banner URL">
+                <input type="text" name="download_link" placeholder="Download Link (MediaFire / Google Drive)">
+                <button type="submit" style="background: #38bdf8;">Post to Official Main Feed 🚀</button>
+            </form>
         </div>
+        {% endif %}
 
-        <!-- Latest Posts -->
-        <h2 style="margin-bottom: 1rem;">🔥 Latest Addons & Updates</h2>
-        <div class="posts-grid">
-            {% if posts %}
-                {% for post in posts %}
-                <div class="post-card">
-                    <img src="{{ post.image_url }}" alt="{{ post.title }}" class="post-img">
-                    <div class="post-body">
-                        <span class="category-badge">{{ post.category }}</span>
-                        <h3 class="post-title">{{ post.title }}</h3>
-                        <p class="post-desc">{{ post.description }}</p>
-                        {% if post.download_link %}
-                            <a href="{{ post.download_link }}" target="_blank" class="btn" style="text-align: center;">📥 Download / View</a>
-                        {% endif %}
-                    </div>
+        <h2>🏠 Official Main Feed</h2>
+        {% if not posts %}
+            <p style="color: var(--text-muted); margin-top: 1rem;">No official posts yet! Verified admins can post above. ⛏️</p>
+        {% endif %}
+
+        {% for post in posts %}
+        <div class="post-card">
+            <div class="post-header">
+                <img src="{{ post.user.pfp_url }}" class="pfp">
+                <div>
+                    <a href="/profile/{{ post.user.username }}" style="color: white; text-decoration: none; font-weight: bold;">
+                        {{ post.user.nickname }} <span class="badge-verified">✔</span>
+                    </a>
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">@{{ post.user.username }}</div>
                 </div>
-                {% endfor %}
-            {% else %}
-                <p style="color: var(--text-muted);">No posts published yet! Check back soon or log in as Admin to create one.</p>
+            </div>
+
+            <h3>{{ post.title }}</h3>
+            <p style="margin-top: 0.5rem; color: #cbd5e1;">{{ post.content }}</p>
+
+            {% if post.image_url %}
+                <img src="{{ post.image_url }}" class="post-img">
+            {% endif %}
+
+            {% if post.download_link %}
+                <br><a href="{{ post.download_link }}" target="_blank" class="btn-download">📥 Download Addon</a>
+            {% endif %}
+
+            <div class="actions">
+                <form action="/post/{{ post.id }}/like" method="POST" style="display:inline;">
+                    <button type="submit" style="background: transparent; color: #ef4444; border: 1px solid #ef4444; margin:0;">
+                        ❤️ {{ post.fake_likes or post.comments|length }}
+                    </button>
+                </form>
+            </div>
+
+            <!-- Admin Fake Like Tool -->
+            {% if current_user.is_admin %}
+            <div class="admin-box">
+                <span style="color: #38bdf8; font-size: 0.8rem; font-weight: bold;">🪄 Admin Fake Likes Override</span>
+                <form action="/admin/fake_post_likes/{{ post.id }}" method="POST" style="display: flex; gap: 8px; margin-top: 5px;">
+                    <input type="text" name="fake_likes" placeholder="e.g. 2M or 3.5B" value="{{ post.fake_likes or '' }}" style="margin:0; padding:0.4rem;">
+                    <button type="submit" style="margin:0; padding: 0.4rem 0.8rem; background: #38bdf8;">Save</button>
+                </form>
+            </div>
             {% endif %}
         </div>
+        {% endfor %}
     </div>
 
 </body>
