@@ -1,0 +1,132 @@
+<!-- TOP NAVBAR -->
+<nav class="navbar bg-dark text-white p-3 d-flex justify-content-between align-items-center">
+  <button class="btn btn-outline-light" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarMenu">
+    ☰ Menu
+  </button>
+  <span class="fw-bold fs-4">⛏️ Minecraft Myanmar</span>
+  <a href="/mailbox" class="btn btn-outline-warning position-relative">
+    📬 Mail
+  </a>
+</nav>
+
+<!-- SIDEBAR MENU -->
+<div class="offcanvas offcanvas-start bg-dark text-white" tabindex="-1" id="sidebarMenu">
+  <div class="offcanvas-header border-bottom border-secondary">
+    <h5 class="offcanvas-title">🎮 Navigation</h5>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+  </div>
+  <div class="offcanvas-body d-flex flex-column justify-content-between">
+    <div class="list-group list-group-flush">
+      <a href="/" class="list-group-item list-group-item-action bg-dark text-white border-0">🏠 Official Feed</a>
+      <a href="/community" class="list-group-item list-group-item-action bg-dark text-white border-0">👥 Community Feed</a>
+      <a href="/friends" class="list-group-item list-group-item-action bg-dark text-white border-0">🤝 Friends List</a>
+      <a href="/mailbox" class="list-group-item list-group-item-action bg-dark text-white border-0">📬 Mailbox</a>
+    </div>
+
+    <!-- ADMIN ONLY >_ POWER BUTTON -->
+    {% if current_user.is_admin %}
+    <div class="mt-4 pt-3 border-top border-danger">
+      <button class="btn btn-danger w-100 fw-bold" data-bs-toggle="modal" data-bs-target="#adminTerminalModal">
+        >_ Admin Power Panel
+      </button>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ADMIN TERMINAL MODAL -->
+{% if current_user.is_admin %}
+<div class="modal fade" id="adminTerminalModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content bg-black text-green border border-danger shadow-lg" style="font-family: monospace;">
+      <div class="modal-header border-bottom border-danger">
+        <h5 class="modal-title text-danger">⚡ Admin Power Command Terminal</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div id="terminalConsole" class="bg-dark text-light p-3 rounded mb-3" style="min-height: 150px; max-height: 250px; overflow-y: auto;">
+          <p class="text-secondary mb-1">Type <code>/ban_gui//</code> or <code>/vi_//username//</code> below...</p>
+        </div>
+        <form id="terminalForm">
+          <div class="input-group">
+            <span class="input-group-text bg-secondary text-white border-0">>_</span>
+            <input type="text" id="cmdInput" class="form-control bg-dark text-light border-secondary" placeholder="Enter command..." required>
+            <button type="submit" class="btn btn-danger">Run</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- BAN GUI MODAL (Triggered via /ban_gui//) -->
+<div class="modal fade" id="banGuiModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content bg-dark text-white">
+      <div class="modal-header border-danger">
+        <h5 class="modal-title text-danger">🔨 Ban Control Center</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form action="/admin/execute_ban" method="POST">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Select Target Player:</label>
+            <select name="user_id" id="banUserSelect" class="form-select bg-secondary text-white border-0" required>
+              <!-- Populated dynamically -->
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Ban Duration:</label>
+            <select name="duration" class="form-select bg-secondary text-white border-0">
+              <option value="forever">Forever (Permanent)</option>
+              <option value="1d">1 Day</option>
+              <option value="7d">7 Days</option>
+              <option value="30d">30 Days</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Reason:</label>
+            <input type="text" name="reason" class="form-control bg-secondary text-white border-0" placeholder="e.g. Griefing / Hacking">
+          </div>
+        </div>
+        <div class="modal-footer border-0">
+          <button type="submit" class="btn btn-danger fw-bold">Execute Ban 🔨</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+document.getElementById('terminalForm')?.addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const input = document.getElementById('cmdInput');
+  const consoleDiv = document.getElementById('terminalConsole');
+  const cmd = input.value.trim();
+
+  consoleDiv.innerHTML += `<div><span class="text-danger">></span> ${cmd}</div>`;
+
+  const formData = new FormData();
+  formData.append('command', cmd);
+
+  const res = await fetch('/admin/terminal', { method: 'POST', body: formData });
+  const data = await res.json();
+
+  if(data.type === 'ban_gui') {
+    const select = document.getElementById('banUserSelect');
+    select.innerHTML = '';
+    data.users.forEach(u => {
+      select.innerHTML += `<option value="${u.id}">${u.username} (${u.nickname})</option>`;
+    });
+    // Hide Terminal & Show Ban GUI Modal
+    bootstrap.Modal.getInstance(document.getElementById('adminTerminalModal')).hide();
+    new bootstrap.Modal(document.getElementById('banGuiModal')).show();
+  } else {
+    consoleDiv.innerHTML += `<div class="mt-2">${data.message}</div>`;
+  }
+  
+  input.value = '';
+  consoleDiv.scrollTop = consoleDiv.scrollHeight;
+});
+</script>
+{% endif %}
