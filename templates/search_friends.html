@@ -17,16 +17,30 @@
             {% for user in results %}
                 <li class="list-group-item d-flex justify-content-between align-items-center">
                     <div class="d-flex align-items-center">
-                        <img src="{{ user.pfp_url }}" alt="PFP" class="rounded-circle me-3" style="width: 45px; height: 45px; object-fit: cover;">
+                        <!-- Clickable Profile Picture -->
+                        <a href="{{ url_for('profile', username=user.username) }}">
+                            <img src="{{ user.pfp_url }}" alt="PFP" class="rounded-circle me-3" style="width: 45px; height: 45px; object-fit: cover;">
+                        </a>
                         <div>
-                            <strong>{{ user.nickname }}</strong> <small class="text-muted">(@{{ user.username }})</small>
+                            <!-- Clickable Username & Nickname -->
+                            <a href="{{ url_for('profile', username=user.username) }}" class="text-decoration-none text-dark">
+                                <strong>{{ user.nickname }}</strong> <small class="text-muted">(@{{ user.username }})</small>
+                            </a>
                             <p class="mb-0 text-muted small">{{ user.bio }}</p>
                         </div>
                     </div>
                     
-                    <form action="{{ url_for('send_friend_request', user_id=user.id) }}" method="POST">
-                        <button type="submit" class="btn btn-sm btn-success">+ Send Friend Request 🤝</button>
-                    </form>
+                    <div class="d-flex gap-2">
+                        <!-- View Profile Button (Works for everyone!) -->
+                        <a href="{{ url_for('profile', username=user.username) }}" class="btn btn-sm btn-outline-primary">
+                            👁️ View Profile
+                        </a>
+
+                        <!-- Send Friend Request Button -->
+                        <form action="{{ url_for('send_friend_request', user_id=user.id) }}" method="POST">
+                            <button type="submit" class="btn btn-sm btn-success">+ Friend 🤝</button>
+                        </form>
+                    </div>
                 </li>
             {% else %}
                 <li class="list-group-item text-muted">No players found matching "{{ query }}" 😢</li>
