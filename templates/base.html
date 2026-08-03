@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Minecraft Myanmar Social{% endblock %}</title>
+    <title>Minecraft Myanmar Social</title>
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- FontAwesome Icons -->
@@ -19,12 +19,6 @@
         .navbar {
             background-color: #1e293b !important;
             border-bottom: 2px solid #334155;
-        }
-
-        .navbar-brand {
-            font-weight: 800;
-            color: #22c55e !important;
-            letter-spacing: 0.5px;
         }
 
         .sidebar {
@@ -48,55 +42,39 @@
             color: #22c55e;
         }
 
-        .admin-link {
-            color: #ef4444 !important;
-            border: 1px dashed #ef4444;
+        /* 💻 ADMIN COMMAND TERMINAL BAR STYLING */
+        .admin-terminal-card {
+            background: #020617;
+            border: 1px solid #22c55e;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 0 15px rgba(34, 197, 94, 0.2);
         }
 
-        .admin-link:hover {
-            background-color: #ef4444 !important;
-            color: #ffffff !important;
-        }
-
-        .card {
-            background-color: #1e293b;
+        .terminal-input {
+            background-color: #0f172a;
+            color: #22c55e;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
             border: 1px solid #334155;
-            border-radius: 12px;
+        }
+
+        .terminal-input:focus {
+            background-color: #0f172a;
+            color: #22c55e;
+            border-color: #22c55e;
+            box-shadow: 0 0 8px rgba(34, 197, 94, 0.4);
+        }
+
+        .modal-content {
+            background-color: #1e293b;
             color: #f8fafc;
+            border: 1px solid #334155;
         }
 
-        .btn-primary {
-            background-color: #22c55e;
-            border: none;
-            font-weight: 600;
-        }
-
-        .btn-primary:hover {
-            background-color: #16a34a;
-        }
-
-        .avatar-sm {
-            width: 38px;
-            height: 38px;
-            object-fit: cover;
-            border-radius: 50%;
-        }
-
-        .avatar-lg {
-            width: 100px;
-            height: 100px;
-            object-fit: cover;
-            border-radius: 50%;
-            border: 3px solid #22c55e;
-        }
-
-        .badge-admin {
-            background-color: #ef4444;
-            color: white;
-            font-size: 0.75rem;
-            padding: 4px 8px;
-            border-radius: 6px;
-        }
+        .avatar-sm { width: 38px; height: 38px; object-fit: cover; border-radius: 50%; }
+        .avatar-lg { width: 100px; height: 100px; object-fit: cover; border-radius: 50%; border: 3px solid #22c55e; }
+        .badge-admin { background-color: #ef4444; color: white; font-size: 0.75rem; padding: 4px 8px; border-radius: 6px; }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
@@ -105,7 +83,7 @@
     <!-- Top Navigation Bar -->
     <nav class="navbar navbar-expand-lg sticky-top">
         <div class="container">
-            <a class="navbar-brand d-flex align-items-center gap-2" href="{{ url_for('home') }}">
+            <a class="navbar-brand text-success fw-bold d-flex align-items-center gap-2" href="{{ url_for('home') }}">
                 <span>⛏️ Minecraft Myanmar</span>
             </a>
             
@@ -115,7 +93,7 @@
 
             <div class="collapse navbar-collapse" id="navbarNav">
                 {% if current_user.is_authenticated %}
-                <ul class="navbar-nav ms-auto align-items-lg-center gap-2 mt-3 mt-lg-0">
+                <ul class="navbar-nav ms-auto align-items-lg-center gap-2">
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('search_friends') }}">🔍 Search</a>
                     </li>
@@ -129,37 +107,45 @@
                         <a class="btn btn-outline-danger btn-sm px-3" href="{{ url_for('logout') }}">Logout</a>
                     </li>
                 </ul>
-                {% else %}
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('login') }}">Login</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="btn btn-primary btn-sm px-3 ms-2" href="{{ url_for('register') }}">Register</a>
-                    </li>
-                </ul>
                 {% endif %}
             </div>
         </div>
     </nav>
 
-    <!-- Main Container Layout -->
+    <!-- Main Container -->
     <div class="container my-4">
-        <!-- Flash Messages -->
+        <!-- Flashed Alerts -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
                     <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
                         {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
                 {% endfor %}
             {% endif %}
         {% endwith %}
 
+        <!-- 💻 ADMIN TERMINAL BAR (Only Visible to Admins) -->
+        {% if current_user.is_authenticated and current_user.is_admin %}
+        <div class="admin-terminal-card mb-4">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="text-success fw-bold font-monospace">&gt;_ Admin Command Terminal 👑</span>
+                <small class="text-muted">Type: <code>/ban_gui//username</code> | <code>/vi_//username</code> | <code>/like_type//username</code></small>
+            </div>
+            <form id="adminTerminalForm" onsubmit="executeCommand(event)">
+                <div class="input-group">
+                    <span class="input-group-text bg-dark text-success border-secondary font-monospace">&gt;</span>
+                    <input type="text" id="commandInput" class="form-control terminal-input" placeholder="Enter command (e.g. /like_type//steve)..." required autocomplete="off">
+                    <button class="btn btn-success fw-bold px-4" type="submit">RUN ⚡</button>
+                </div>
+            </form>
+        </div>
+        {% endif %}
+
         {% if current_user.is_authenticated %}
         <div class="row g-4">
-            <!-- Sidebar Navigation -->
+            <!-- Sidebar -->
             <div class="col-md-3">
                 <div class="sidebar">
                     <div class="text-center mb-3">
@@ -175,50 +161,176 @@
                     <hr class="border-secondary">
                     
                     <ul class="nav flex-column">
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('home') }}">🏠 Official News</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('community') }}">🌐 Community Feed</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('friends_list') }}">👥 Friends</a>
-                        </li>
-                        <!-- ✉️ MAILBOX SIDEBAR LINK -->
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('chat') }}">✉️ Mailbox</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('profile', username=current_user.username) }}">👤 My Profile</a>
-                        </li>
-
-                        <!-- >_ ADMIN TOOLS LINK (Only shown to Admins) -->
-                        {% if current_user.is_admin %}
-                        <li class="nav-item mt-3">
-                            <a class="nav-link admin-link" href="{{ url_for('admin_panel') }}">
-                                &gt;_ Admin Tools 🛠️
-                            </a>
-                        </li>
-                        {% endif %}
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('home') }}">🏠 Official News</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('community') }}">🌐 Community Feed</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('friends_list') }}">👥 Friends</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('chat') }}">✉️ Mailbox</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('profile', username=current_user.username) }}">👤 My Profile</a></li>
                     </ul>
                 </div>
             </div>
 
-            <!-- Page Content -->
+            <!-- Page Content Slot -->
             <div class="col-md-9">
                 {% block content %}{% endblock %}
             </div>
         </div>
         {% else %}
-            <!-- Unauthenticated View -->
-            {% block auth_content %}
-                {% block content_unauth %}{% endblock %}
-            {% endblock %}
+            {% block auth_content %}{% endblock %}
         {% endif %}
     </div>
 
+    <!-- ----------------------- 👑 ADMIN COMMAND MODALS ----------------------- -->
+    {% if current_user.is_authenticated and current_user.is_admin %}
+
+    <!-- 1️⃣ MODAL: /like_type//<username> GUI -->
+    <div class="modal fade" id="likeTypeModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title text-warning fw-bold">💎 Like-Type & Stats GUI Control</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form action="{{ url_for('admin_gui_update') }}" method="POST">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Target Username:</label>
+                            <input type="text" id="likeTargetUser" name="target_username" class="form-control bg-dark text-white border-secondary" readonly>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Select Like Type/Badge Style:</label>
+                            <select name="like_type" class="form-select bg-dark text-white border-secondary">
+                                <option value="❤️ Classic Red">❤️ Classic Red Heart</option>
+                                <option value="💎 Diamond Like">💎 Diamond Like</option>
+                                <option value="💚 Emerald Like">💚 Emerald Like</option>
+                                <option value="⭐ Netherite Star">⭐ Netherite Star</option>
+                                <option value="🔥 Dragon Flame">🔥 Dragon Flame</option>
+                                <option value="👑 Admin Royal Crown">👑 Admin Royal Crown</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Fake Likes Count:</label>
+                            <input type="text" name="fake_likes" class="form-control bg-dark text-white border-secondary" placeholder="e.g. 999K or 1.2M">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Fake Followers Count:</label>
+                            <input type="text" name="fake_followers" class="form-control bg-dark text-white border-secondary" placeholder="e.g. 500K">
+                        </div>
+                    </div>
+                    <div class="modal-footer border-secondary">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-success fw-bold">Apply Changes ✨</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2️⃣ MODAL: /ban_gui//<username> GUI -->
+    <div class="modal fade" id="banGuiModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title text-danger fw-bold">🚨 User Ban Control GUI</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form action="{{ url_for('admin_ban_user') }}" method="POST">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Target Username to Ban:</label>
+                            <input type="text" id="banTargetUser" name="target_username" class="form-control bg-dark text-white border-secondary" readonly>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Ban Reason:</label>
+                            <textarea name="ban_reason" class="form-control bg-dark text-white border-secondary" rows="3" placeholder="Violation of community guidelines..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-secondary">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-danger fw-bold">Execute Ban 🔨</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3️⃣ MODAL: /vi_//<username> GUI (Inspect Profile) -->
+    <div class="modal fade" id="inspectModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title text-info fw-bold">🔍 Inspecting User Info</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <p class="fs-5">Target Username: <strong id="inspectTargetUser" class="text-success"></strong></p>
+                    <p class="text-muted">Redirecting to full profile inspection view...</p>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <a id="inspectRedirectBtn" href="#" class="btn btn-info fw-bold">Open Full Profile 👤</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% endif %}
+
     <!-- Bootstrap 5 JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- 💻 COMMAND TERMINAL PARSER SCRIPT -->
+    <script>
+        function executeCommand(event) {
+            event.preventDefault();
+            const input = document.getElementById('commandInput').value.trim();
+
+            // 1. Check for /ban_gui//<username>
+            if (input.startsWith('/ban_gui//')) {
+                const username = input.split('/ban_gui//')[1];
+                if (username) {
+                    document.getElementById('banTargetUser').value = username;
+                    const modal = new bootstrap.Modal(document.getElementById('banGuiModal'));
+                    modal.show();
+                    document.getElementById('commandInput').value = '';
+                } else {
+                    alert('⚠️ Please specify a username! Example: /ban_gui//steve');
+                }
+            } 
+            // 2. Check for /vi_//<username>
+            else if (input.startsWith('/vi_//')) {
+                const username = input.split('/vi_//')[1];
+                if (username) {
+                    document.getElementById('inspectTargetUser').innerText = '@' + username;
+                    document.getElementById('inspectRedirectBtn').href = '/profile/' + username;
+                    const modal = new bootstrap.Modal(document.getElementById('inspectModal'));
+                    modal.show();
+                    document.getElementById('commandInput').value = '';
+                } else {
+                    alert('⚠️ Please specify a username! Example: /vi_//steve');
+                }
+            } 
+            // 3. Check for /like_type//<username>
+            else if (input.startsWith('/like_type//')) {
+                const username = input.split('/like_type//')[1];
+                if (username) {
+                    document.getElementById('likeTargetUser').value = username;
+                    const modal = new bootstrap.Modal(document.getElementById('likeTypeModal'));
+                    modal.show();
+                    document.getElementById('commandInput').value = '';
+                } else {
+                    alert('⚠️ Please specify a username! Example: /like_type//steve');
+                }
+            } 
+            else {
+                alert('❌ Unknown Command! Available commands:\n- /ban_gui//<username>\n- /vi_//<username>\n- /like_type//<username>');
+            }
+        }
+    </script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>
