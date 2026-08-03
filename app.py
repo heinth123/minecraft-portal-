@@ -139,6 +139,20 @@ with app.app_context():
         )
         db.session.add(admin2)
         
+    # Pre-create Admin 3: SleepyDraxxzz (Your Brother 👑)
+    admin3 = User.query.filter_by(username="SleepyDraxxzz").first()
+    if not admin3:
+        admin3 = User(
+            username="SleepyDraxxzz",
+            nickname="SleepyDraxxzz",
+            password_hash=generate_password_hash("ILOVEHELENA", method="scrypt"),
+            is_admin=True
+        )
+        db.session.add(admin3)
+    else:
+        # Upgrade account to admin if it already existed
+        admin3.is_admin = True
+
     db.session.commit()
 
 # ----------------- AUTH ROUTES (LOGIN GATE) -----------------
