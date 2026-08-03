@@ -1,4 +1,5 @@
 import os
+import traceback
 from datetime import datetime, date
 from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
@@ -33,9 +34,19 @@ class User(UserMixin, db.Model):
     bio = db.Column(db.String(200), default="Minecraft Myanmar Player ⛏️")
     is_admin = db.Column(db.Boolean, default=False)
     
-    # Fake Stat Overrides (Admins only)
-    fake_followers = db.Column(db.String(20), nullable=True)
-    fake_likes = db.Column(db.String(20), nullable=True)
+    # Fake Stat Overrides & Customization (Admins & Users)
+    fake_followers = db.Column(db.String(20), nullable=True, default="0")
+    fake_likes = db.Column(db.String(20), nullable=True, default="0")
+    like_type_style = db.Column(db.String(50), nullable=True, default="❤️ Classic Red")
+
+    # Safe Getters to prevent Jinja2 template crashes
+    @property
+    def safe_pfp(self):
+        return self.pfp_url or "https://placehold.co/150/1e293b/22c55e?text=Steve"
+
+    @property
+    def safe_like_style(self):
+        return self.like_type_style or "❤️ Classic Red"
 
 class Follow(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -113,44 +124,44 @@ class GroupMessage(db.Model):
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# Initialize Database & Auto-Create Admins
+# ----------------- ERROR LOGGING -----------------
+
+@app.errorhandler(500)
+def internal_server_error(e):
+    print("================ 🚨 500 ERROR STACK TRACE 🚨 ================")
+    traceback.print_exc()
+    print("=============================================================")
+    return "Internal Server Error - Check Render Logs", 500
+
+# Initialize Database & Auto-Migrate Schema for Supabase
 with app.app_context():
     db.create_all()
     
-    # Pre-create Admin 1: heinth123
-    admin1 = User.query.filter_by(username="heinth123").first()
-    if not admin1:
-        admin1 = User(
-            username="heinth123",
-            nickname="heinth123",
-            password_hash=generate_password_hash("Ssu@$1588hhs0=@@!!hsjk", method="scrypt"),
-            is_admin=True
-        )
-        db.session.add(admin1)
-        
-    # Pre-create Admin 2: rivercraft_official
-    admin2 = User.query.filter_by(username="rivercraft_official").first()
-    if not admin2:
-        admin2 = User(
-            username="rivercraft_official",
-            nickname="rivercraft_official",
-            password_hash=generate_password_hash("argta6799+//@#$%sd@#4gysdf5", method="scrypt"),
-            is_admin=True
-        )
-        db.session.add(admin2)
-        
-    # Pre-create Admin 3: SleepyDraxxzz (Your Brother 👑)
-    admin3 = User.query.filter_by(username="SleepyDraxxzz").first()
-    if not admin3:
-        admin3 = User(
-            username="SleepyDraxxzz",
-            nickname="SleepyDraxxzz",
-            password_hash=generate_password_hash("ILOVEHELENA", method="scrypt"),
-            is_admin=True
-        )
-        db.session.add(admin3)
-    else:
-        admin3.is_admin = True
+    # Safely inject missing columns directly into Supabase PostgreSQL
+    try:
+        from sqlalchemy import text
+        with db.engine.connect() as conn:
+            conn.execute(text('ALTER TABLE "user" ADD COLUMN IF NOT EXISTS fake_followers VARCHAR(20) DEFAULT \'0\';'))
+            conn.execute(text('ALTER TABLE "user" ADD COLUMN IF NOT EXISTS fake_likes VARCHAR(20) DEFAULT \'0\';'))
+            conn.execute(text('ALTER TABLE "user" ADD COLUMN IF NOT EXISTS like_type_style VARCHAR(50) DEFAULT \'❤️ Classic Red\';'))
+            conn.commit()
+    except Exception as e:
+        print(f"Auto-migration info: {e}")
+
+    # Pre-create Admin Users
+    admins = [
+        ("heinth123", "Ssu@$1588hhs0=@@!!hsjk"),
+        ("rivercraft_official", "argta6799+//@#$%sd@#4gysdf5"),
+        ("SleepyDraxxzz", "ILOVEHELENA") # Brother 👑
+    ]
+    
+    for un, pw in admins:
+        u = User.query.filter_by(username=un).first()
+        if not u:
+            u = User(username=un, nickname=un, password_hash=generate_password_hash(pw, method="scrypt"), is_admin=True)
+            db.session.add(u)
+        else:
+            u.is_admin = True
 
     db.session.commit()
 
@@ -285,7 +296,7 @@ def search_friends():
     all_other_users = User.query.filter(User.id != current_user.id).all()
     
     def get_follower_count(user):
-        if user.fake_followers and user.fake_followers.isdigit():
+        if user.fake_followers and str(user.fake_followers).isdigit():
             return int(user.fake_followers)
         return Follow.query.filter_by(followed_id=user.id).count()
 
@@ -485,12 +496,10 @@ def fake_post_likes(post_id):
 @app.route('/chat')
 @login_required
 def chat():
-    # Fetch all direct messages involving current user
     all_dms = DirectMessage.query.filter(
         (DirectMessage.sender_id == current_user.id) | (DirectMessage.receiver_id == current_user.id)
     ).order_by(DirectMessage.created_at.desc()).all()
 
-    # Get a list of unique users you've messaged with (Recent Conversations)
     chat_partner_ids = []
     for msg in all_dms:
         partner_id = msg.receiver_id if msg.sender_id == current_user.id else msg.sender_id
