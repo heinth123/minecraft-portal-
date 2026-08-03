@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Messages | Minecraft Myanmar</title>
+    <style>
+        :root { --bg-dark: #0f172a; --card-bg: #1e293b; --green: #22c55e; --text-main: #f8fafc; --text-muted: #94a3b8; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, sans-serif; }
+        body { background-color: var(--bg-dark); color: var(--text-main); min-height: 100vh; }
+        nav { display: flex; justify-content: space-between; align-items: center; padding: 1rem 2rem; background: #1e293b; border-bottom: 1px solid #334155; }
+        .nav-links { display: flex; gap: 15px; }
+        .nav-links a { color: var(--text-main); text-decoration: none; font-weight: bold; }
+        .container { max-width: 700px; margin: 2rem auto; padding: 0 1rem; }
+        .user-item { background: var(--card-bg); padding: 1rem; border-radius: 10px; border: 1px solid #334155; margin-bottom: 0.8rem; display: flex; justify-content: space-between; align-items: center; }
+        .pfp { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
+        .user-info { display: flex; align-items: center; gap: 10px; }
+        .chat-btn { background: var(--green); color: black; padding: 0.5rem 1rem; text-decoration: none; font-weight: bold; border-radius: 6px; }
+        .badge-verified { color: #38bdf8; }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <span style="font-weight: bold; color: var(--green);">⛏️ Minecraft Myanmar</span>
+        <div class="nav-links">
+            <a href="/">🏠 Home</a>
+            <a href="/community">🌐 Community</a>
+            <a href="/chat" style="color: var(--green);">💬 Chat</a>
+            <a href="/profile/{{ current_user.username }}">👤 Profile</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h2 style="margin-bottom: 1.5rem;">💬 Direct Messages & Players</h2>
+        {% for user in users %}
+        <div class="user-item">
+            <div class="user-info">
+                <img src="{{ user.pfp_url }}" class="pfp">
+                <div>
+                    <div style="font-weight: bold;">
+                        {{ user.nickname }}
+                        {% if user.is_admin %}<span class="badge-verified">✔</span>{% endif %}
+                    </div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted);">@{{ user.username }}</div>
+                </div>
+            </div>
+            <a href="/chat/dm/{{ user.id }}" class="chat-btn">Message 💬</a>
+        </div>
+        {% endfor %}
+    </div>
+
+</body>
+</html>
