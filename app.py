@@ -150,12 +150,11 @@ with app.app_context():
         )
         db.session.add(admin3)
     else:
-        # Upgrade account to admin if it already existed
         admin3.is_admin = True
 
     db.session.commit()
 
-# ----------------- AUTH ROUTES (LOGIN GATE) -----------------
+# ----------------- AUTH ROUTES -----------------
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -216,14 +215,12 @@ def logout():
 @app.route('/')
 @login_required
 def home():
-    # Official Feed (Only Official Posts)
     posts = Post.query.filter_by(feed_type='official').order_by(Post.id.desc()).all()
     return render_template('index.html', posts=posts, feed_title="🏠 Official Announcements & Addons")
 
 @app.route('/community')
 @login_required
 def community():
-    # Community Feed (All Player Posts)
     posts = Post.query.filter_by(feed_type='community').order_by(Post.id.desc()).all()
     return render_template('community.html', posts=posts)
 
@@ -236,7 +233,6 @@ def create_post():
     download_link = request.form.get('download_link')
     feed_type = request.form.get('feed_type', 'community')
     
-    # Restrict official feed to admins only
     if feed_type == 'official' and not current_user.is_admin:
         feed_type = 'community'
         
@@ -260,7 +256,6 @@ def create_post():
 @app.route('/friends')
 @login_required
 def friends_list():
-    # Fetch accepted friends
     friendships = Friendship.query.filter(
         ((Friendship.sender_id == current_user.id) | (Friendship.receiver_id == current_user.id)) &
         (Friendship.status == 'accepted')
@@ -270,10 +265,7 @@ def friends_list():
     for f in friendships:
         friends.append(f.receiver if f.sender_id == current_user.id else f.sender)
 
-    # Fetch incoming pending requests
     pending_requests = Friendship.query.filter_by(receiver_id=current_user.id, status='pending').all()
-
-    # Discover other players
     all_users = User.query.filter(User.id != current_user.id).all()
 
     return render_template('friends.html', friends=friends, pending_requests=pending_requests, all_users=all_users)
@@ -285,13 +277,11 @@ def search_friends():
     search_results = []
     
     if query:
-        # Search users by username or nickname (excluding current user)
         search_results = User.query.filter(
             ((User.username.ilike(f"%{query}%")) | (User.nickname.ilike(f"%{query}%"))),
             User.id != current_user.id
         ).all()
 
-    # 🌟 FETCH RECOMMENDED USERS (Sorted by Admins First, then Most Followers) 🌟
     all_other_users = User.query.filter(User.id != current_user.id).all()
     
     def get_follower_count(user):
@@ -303,7 +293,7 @@ def search_friends():
         all_other_users,
         key=lambda u: (u.is_admin, get_follower_count(u)),
         reverse=True
-    )[:5]  # Top 5 recommended players
+    )[:5]
 
     return render_template(
         'search_friends.html', 
@@ -382,9 +372,9 @@ def follow_user(user_id):
     if user_id != current_user.id:
         existing = Follow.query.filter_by(follower_id=current_user.id, followed_id=user_id).first()
         if existing:
-            db.session.delete(existing)  # Unfollow
+            db.session.delete(existing)
         else:
-            new_follow = Follow(follower_id=current_user.id, followed_id=user_id)  # Follow
+            new_follow = Follow(follower_id=current_user.id, followed_id=user_id)
             db.session.add(new_follow)
         db.session.commit()
     return redirect(request.referrer or url_for('home'))
@@ -405,7 +395,7 @@ def profile_like(user_id):
         
     return redirect(request.referrer or url_for('home'))
 
-# ----------------- PROFILES & ADMIN OVERRIDES -----------------
+# ----------------- PROFILES -----------------
 
 @app.route('/profile/<username>')
 @login_required
@@ -417,7 +407,6 @@ def profile(username):
     is_following = Follow.query.filter_by(follower_id=current_user.id, followed_id=user.id).first() is not None
     user_posts = Post.query.filter_by(user_id=user.id).order_by(Post.id.desc()).all()
     
-    # Check Friendship Status
     friendship = Friendship.query.filter(
         ((Friendship.sender_id == current_user.id) & (Friendship.receiver_id == user.id)) |
         ((Friendship.sender_id == user.id) & (Friendship.receiver_id == current_user.id))
@@ -451,6 +440,19 @@ def edit_profile():
     flash('Profile updated! ✨', 'success')
     return redirect(url_for('profile', username=current_user.username))
 
+# ----------------- ADMIN DASHBOARD & OVERRIDES -----------------
+
+@app.route('/admin')
+@login_required
+def admin_panel():
+    if not current_user.is_admin:
+        flash("Access denied! Admins only. 🚫", "danger")
+        return redirect(url_for('home'))
+        
+    all_users = User.query.all()
+    all_posts = Post.query.order_by(Post.id.desc()).all()
+    return render_template('admin.html', users=all_users, posts=all_posts)
+
 @app.route('/admin/fake_stats/<int:user_id>', methods=['POST'])
 @login_required
 def fake_stats(user_id):
@@ -463,7 +465,7 @@ def fake_stats(user_id):
     db.session.commit()
     
     flash('Fake stats applied! 🪄', 'success')
-    return redirect(url_for('profile', username=user.username))
+    return redirect(request.referrer or url_for('admin_panel'))
 
 @app.route('/admin/fake_post_likes/<int:post_id>', methods=['POST'])
 @login_required
@@ -476,16 +478,29 @@ def fake_post_likes(post_id):
     db.session.commit()
     
     flash('Post fake likes applied! 🪄', 'success')
-    return redirect(request.referrer or url_for('home'))
+    return redirect(request.referrer or url_for('admin_panel'))
 
-# ----------------- CHAT & GROUPS -----------------
+# ----------------- MAILBOX / CHAT -----------------
 
 @app.route('/chat')
 @login_required
 def chat():
+    # Fetch all direct messages involving current user
+    all_dms = DirectMessage.query.filter(
+        (DirectMessage.sender_id == current_user.id) | (DirectMessage.receiver_id == current_user.id)
+    ).order_by(DirectMessage.created_at.desc()).all()
+
+    # Get a list of unique users you've messaged with (Recent Conversations)
+    chat_partner_ids = []
+    for msg in all_dms:
+        partner_id = msg.receiver_id if msg.sender_id == current_user.id else msg.sender_id
+        if partner_id not in chat_partner_ids:
+            chat_partner_ids.append(partner_id)
+
+    recent_chats = User.query.filter(User.id.in_(chat_partner_ids)).all() if chat_partner_ids else []
     all_users = User.query.filter(User.id != current_user.id).all()
-    groups = GroupChat.query.all()
-    return render_template('chat.html', users=all_users, groups=groups)
+
+    return render_template('chat.html', recent_chats=recent_chats, all_users=all_users)
 
 @app.route('/chat/dm/<int:receiver_id>', methods=['GET', 'POST'])
 @login_required
