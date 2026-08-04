@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4 text-center" style="max-width: 900px;">
+    
+    <!-- CALL HEADER -->
+    <div class="card bg-dark text-white border-secondary mb-4 shadow">
+        <div class="card-body">
+            <h3 class="fw-bold text-success mb-1">📹 Video Call with {{ target_user.nickname or target_user.username }}</h3>
+            <p class="text-muted small">Peer-to-Peer Encrypted Call 🔒</p>
+            
+            <!-- STATUS BADGE -->
+            <div id="callStatus" class="badge bg-warning text-dark fs-6 my-2">Initializing connection...</div>
+
+            <!-- CONTROLS -->
+            <div class="d-flex justify-content-center gap-2 mt-3">
+                <button id="callBtn" class="btn btn-success fw-bold px-4" style="display: none;">
+                    📞 Start Call
+                </button>
+                <button id="toggleMicBtn" class="btn btn-outline-light" onclick="toggleAudio()" disabled>
+                    🎙️ Mute Mic
+                </button>
+                <button id="toggleCamBtn" class="btn btn-outline-light" onclick="toggleVideo()" disabled>
+                    📹 Turn Off Cam
+                </button>
+                <a href="{{ url_for('profile', user_id=target_user.id) }}" class="btn btn-danger">
+                    ❌ Hang Up
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- VIDEO STREAMS GRID -->
+    <div class="row g-3">
+        <!-- LOCAL VIDEO (YOU) -->
+        <div class="col-md-6">
+            <div class="card bg-dark text-white border-secondary p-2 position-relative shadow">
+                <span class="position-absolute top-0 start-0 m-3 badge bg-secondary opacity-75">You</span>
+                <video id="localVideo" autoplay muted playsinline class="w-100 rounded bg-black" style="height: 320px; object-fit: cover;"></video>
+            </div>
+        </div>
+
+        <!-- REMOTE VIDEO (FRIEND) -->
+        <div class="col-md-6">
+            <div class="card bg-dark text-white border-secondary p-2 position-relative shadow">
+                <span class="position-absolute top-0 start-0 m-3 badge bg-success opacity-75">{{ target_user.username }}</span>
+                <video id="remoteVideo" autoplay playsinline class="w-100 rounded bg-black" style="height: 320px; object-fit: cover;"></video>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- PEERJS CLIENT LIBRARY -->
+<script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+
+<script>
+    // 1. UNIQUE PEER IDS
+    const myPeerId = "user-{{ current_user.id }}";
+    const targetPeerId = "user-{{ target_user.id }}";
+
+    let localStream;
+    let peer;
+    let currentCall;
+
+    const statusEl = document.getElementById('callStatus');
+    const callBtn = document.getElementById('callBtn');
+    const localVideo = document.getElementById('localVideo');
+    const remoteVideo = document.getElementById('remoteVideo');
+
+    // 2. GET WEBCAM & MIC PERMISSIONS
+    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+        .then(stream => {
+            localStream = stream;
+            localVideo.srcObject = stream;
+            
+            document.getElementById('toggleMicBtn').disabled = false;
+            document.getElementById('toggleCamBtn').disabled = false;
+
+            // Initialize PeerJS with our custom ID
+            initPeer();
+        })
+        .catch(err => {
+            console.error("Camera/Mic Error:", err);
+            statusEl.className = "badge bg-danger fs-6 my-2";
+            statusEl.innerText = "⚠️ Camera/Microphone access denied!";
+        });
+
+    function initPeer() {
+        peer = new Peer(myPeerId);
+
+        peer.on('open', id => {
+            statusEl.className = "badge bg-info text-dark fs-6 my-2";
+            statusEl.innerText = "Ready! Click 'Start Call' when your friend is on this page.";
+            callBtn.style.display = 'inline-block';
+        });
+
+        // LISTEN FOR INCOMING CALLS
+        peer.on('call', call => {
+            statusEl.className = "badge bg-success fs-6 my-2";
+            statusEl.innerText = "Connected to Call! 🟢";
+            
+            // Answer the incoming call with our media stream
+            call.answer(localStream);
+            
+            call.on('stream', remoteStream => {
+                remoteVideo.srcObject = remoteStream;
+            });
+
+            currentCall = call;
+        });
+
+        peer.on('error', err => {
+            console.error("Peer Error:", err);
+            statusEl.className = "badge bg-secondary fs-6 my-2";
+            statusEl.innerText = "Connecting... (Make sure partner is online)";
+        });
+    }
+
+    // 3. START CALL BUTTON CLICK
+    callBtn.addEventListener('click', () => {
+        statusEl.className = "badge bg-warning text-dark fs-6 my-2";
+        statusEl.innerText = "Calling " + "{{ target_user.username }}" + "...";
+
+        // Call target user
+        const call = peer.call(targetPeerId, localStream);
+        
+        call.on('stream', remoteStream => {
+            statusEl.className = "badge bg-success fs-6 my-2";
+            statusEl.innerText = "Connected to Call! 🟢";
+            remoteVideo.srcObject = remoteStream;
+        });
+
+        currentCall = call;
+    });
+
+    // 4. MIC & CAM CONTROLS
+    function toggleAudio() {
+        const audioTrack = localStream.getAudioTracks()[0];
+        audioTrack.enabled = !audioTrack.enabled;
+        const btn = document.getElementById('toggleMicBtn');
+        btn.innerText = audioTrack.enabled ? "🎙️ Mute Mic" : "🔇 Unmute Mic";
+        btn.classList.toggle('btn-outline-light');
+        btn.classList.toggle('btn-warning');
+    }
+
+    function toggleVideo() {
+        const videoTrack = localStream.getVideoTracks()[0];
+        videoTrack.enabled = !videoTrack.enabled;
+        const btn = document.getElementById('toggleCamBtn');
+        btn.innerText = videoTrack.enabled ? "📹 Turn Off Cam" : "📷 Turn On Cam";
+        btn.classList.toggle('btn-outline-light');
+        btn.classList.toggle('btn-warning');
+    }
+</script>
+{% endblock %}
