@@ -31,7 +31,7 @@ BANNED_WORDS = [
 ]
 
 def contains_banned_words(text):
-    """Returns True if text contains any banned words or invalid characters."""
+    """Returns True if text contains any banned words or invalid characters using word boundaries."""
     if not text:
         return False
     
@@ -41,7 +41,7 @@ def contains_banned_words(text):
     if clean_text.strip().replace('.', '') == '' or clean_text.strip().replace('/', '') == '':
         return True
 
-    # Check for whole banned words using regular expressions
+    # Check for whole banned words to avoid false positives (e.g. speed, sleep, addition)
     for word in BANNED_WORDS:
         pattern = r'\b' + re.escape(word) + r'\b'
         if re.search(pattern, clean_text):
@@ -198,6 +198,7 @@ def init_database():
 init_database()
 
 # ----------------- ROUTES -----------------
+
 @app.route('/call/<int:user_id>')
 @login_required
 def video_call(user_id):
@@ -605,6 +606,7 @@ def edit_profile():
     nickname = request.form.get('nickname', '').strip()
     pfp_url = request.form.get('pfp_url')
     bio = request.form.get('bio', '').strip()
+    like_type_style = request.form.get('like_type_style')
     
     if contains_banned_words(nickname) or contains_banned_words(bio):
         flash('Your profile changes contained inappropriate words! 🚫', 'danger')
@@ -616,6 +618,8 @@ def edit_profile():
         current_user.pfp_url = pfp_url
     if bio:
         current_user.bio = bio
+    if like_type_style:
+        current_user.like_type_style = like_type_style
         
     db.session.commit()
     flash('Profile updated! ✨', 'success')
