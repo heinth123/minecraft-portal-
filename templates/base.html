@@ -4,22 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Minecraft Myanmar ⛏️</title>
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome Icons -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 </head>
 <body class="bg-slate-900 text-white min-h-screen flex flex-col font-sans antialiased">
 
     <!-- TOP NAVIGATION BAR -->
     <header class="bg-slate-800 border-b border-slate-700 h-16 flex items-center justify-between px-6 z-20 sticky top-0 shadow-md">
-        <!-- Logo / Brand -->
         <div class="flex items-center space-x-3">
             <span class="text-2xl">⛏️</span>
             <span class="font-bold text-lg tracking-wide text-emerald-400 hidden sm:inline">Minecraft Myanmar</span>
         </div>
 
-        <!-- Main Top Bar Navigation Links -->
         <nav class="flex items-center space-x-1 sm:space-x-6 text-sm font-medium">
             <a href="{{ url_for('home') }}" class="px-3 py-2 rounded-lg hover:bg-slate-700 hover:text-emerald-400 transition flex items-center gap-1.5">
                 <i class="fa-solid fa-house"></i> Home
@@ -67,7 +63,7 @@
                 <nav class="space-y-2">
                     
                     <!-- Mail Box (All Users) -->
-                    <a href="{{ url_for('chat') }}" class="flex items-center gap-4 p-3 rounded-xl hover:bg-emerald-600/20 hover:text-emerald-400 text-slate-300 transition group/item" title="Mail Box">
+                    <a href="{{ url_for('mailbox') }}" class="flex items-center gap-4 p-3 rounded-xl hover:bg-emerald-600/20 hover:text-emerald-400 text-slate-300 transition group/item" title="Mail Box">
                         <i class="fa-solid fa-envelope text-xl w-6 text-center text-emerald-400"></i>
                         <span class="whitespace-nowrap font-medium text-sm hidden group-hover:inline group-[.expanded]:inline">Mail Box</span>
                     </a>
@@ -83,7 +79,6 @@
                 </nav>
             </div>
 
-            <!-- Footer / Logout Option (Collapsed Friendly) -->
             {% if current_user.is_authenticated %}
             <div class="p-3 border-t border-slate-700">
                 <a href="{{ url_for('logout') }}" class="flex items-center gap-4 p-3 rounded-xl hover:bg-red-600/20 text-slate-400 hover:text-red-400 transition" title="Logout">
@@ -98,7 +93,6 @@
         <!-- MAIN CONTENT AREA -->
         <main class="flex-1 p-6 overflow-y-auto">
             
-            <!-- Flash Alert Messages -->
             <div class="max-w-4xl mx-auto mb-4">
                 {% with messages = get_flashed_messages(with_categories=true) %}
                   {% if messages %}
@@ -115,13 +109,11 @@
                 {% endwith %}
             </div>
 
-            <!-- Child Templates Inject Here -->
             {% block content %}{% endblock %}
 
         </main>
     </div>
 
-    <!-- JAVASCRIPT FOR SIDEBAR TOGGLE -->
     <script>
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
