@@ -3,154 +3,133 @@
 {% block title %}{{ user.nickname }} (@{{ user.username }}) - Profile{% endblock %}
 
 {% block content %}
-<div class="container py-4">
-    <!-- Profile Card Header -->
-    <div class="card bg-dark text-white border-secondary shadow-lg rounded-4 p-4 mb-4">
-        <div class="d-flex flex-column flex-md-row align-items-center gap-4">
-            <!-- Profile Avatar -->
-            <div class="position-relative">
-                <img src="{{ user.safe_pfp }}" alt="Avatar" class="rounded-circle border border-3 border-info shadow" style="width: 130px; height: 130px; object-fit: cover;">
+<div style="max-width: 800px; margin: 30px auto; padding: 0 15px; color: white;">
+    
+    <!-- Main Profile Card -->
+    <div style="background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 30px; box-shadow: 0 10px 25px rgba(0,0,0,0.4); text-align: center;">
+        
+        <!-- Avatar -->
+        <div style="margin-bottom: 15px;">
+            <img src="{{ user.safe_pfp }}" alt="Avatar" style="width: 120px; height: 120px; border-radius: 50%; border: 3px solid #38bdf8; object-fit: cover;">
+        </div>
+
+        <!-- Nickname & Admin Badge -->
+        <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 5px;">
+            <h2 style="margin: 0; font-size: 1.8rem; font-weight: 700;">{{ user.nickname }}</h2>
+            
+            {% if user.is_admin %}
+                <span style="background: linear-gradient(135deg, #0284c7, #38bdf8); color: white; font-size: 0.8rem; padding: 3px 10px; border-radius: 12px; font-weight: bold; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="#ffffff">
+                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                    </svg>
+                    ⚡ Admin
+                </span>
+            {% endif %}
+        </div>
+
+        <!-- Username & Bio -->
+        <p style="color: #94a3b8; margin: 0 0 8px 0;">@{{ user.username }}</p>
+        <p style="color: #cbd5e1; font-style: italic; margin-bottom: 20px;">"{{ user.bio }}"</p>
+
+        <!-- Action Buttons -->
+        <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-bottom: 25px;">
+            {% if current_user.id == user.id %}
+                <button onclick="document.getElementById('editModal').style.display='flex'" style="background: #334155; color: #38bdf8; border: 1px solid #38bdf8; padding: 8px 18px; border-radius: 20px; cursor: pointer; font-weight: 600;">
+                    ✏️ Edit Profile
+                </button>
+            {% else %}
+                <a href="{{ url_for('video_call', user_id=user.id) }}" style="background: #22c55e; color: white; text-decoration: none; padding: 8px 18px; border-radius: 20px; font-weight: 600;">
+                    📞 Call {{ user.nickname }}
+                </a>
+
+                <form action="{{ url_for('follow_user', user_id=user.id) }}" method="POST" style="display: inline;">
+                    <button type="submit" style="background: {% if is_following %}#ef4444{% else %}#3b82f6{% endif %}; color: white; border: none; padding: 8px 18px; border-radius: 20px; cursor: pointer; font-weight: 600;">
+                        {% if is_following %}Unfollow{% else %}➕ Follow{% endif %}
+                    </button>
+                </form>
+
+                <form action="{{ url_for('profile_like', user_id=user.id) }}" method="POST" style="display: inline;">
+                    <button type="submit" style="background: transparent; color: #f59e0b; border: 1px solid #f59e0b; padding: 8px 18px; border-radius: 20px; cursor: pointer;">
+                        {{ user.safe_like_style }}
+                    </button>
+                </form>
+            {% endif %}
+        </div>
+
+        <!-- Stats Counter Box -->
+        <div style="display: flex; justify-content: space-around; border-top: 1px solid #334155; padding-top: 20px; margin-top: 15px;">
+            <div>
+                <div style="font-size: 1.5rem; font-weight: bold; color: #38bdf8;">{{ followers_count }}</div>
+                <div style="font-size: 0.8rem; color: #94a3b8; text-transform: uppercase;">Followers</div>
             </div>
-
-            <!-- Profile Info -->
-            <div class="flex-grow-1 text-center text-md-start">
-                <div class="d-flex flex-wrap align-items-center justify-content-center justify-content-md-start gap-2">
-                    <h2 class="fw-bold mb-0">{{ user.nickname }}</h2>
-                    
-                    <!-- ⚡ Admin / Verified Blue Checkmark Badge -->
-                    {% if user.is_admin %}
-                        <span class="badge bg-primary d-inline-flex align-items-center gap-1 shadow-sm px-2 py-1 rounded-pill" title="Verified Admin">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="#ffffff">
-                                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-                            </svg>
-                            ⚡ Admin
-                        </span>
-                    {% endif %}
-                </div>
-
-                <p class="text-secondary mb-2">@{{ user.username }}</p>
-                <p class="fst-italic text-light opacity-75 mb-3">"{{ user.bio }}"</p>
-
-                <!-- Action Buttons: Call, Edit, Follow, Friend -->
-                <div class="d-flex flex-wrap gap-2 justify-content-center justify-content-md-start">
-                    {% if current_user.id == user.id %}
-                        <!-- Edit Profile Trigger Modal -->
-                        <button class="btn btn-outline-info btn-sm rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#editProfileModal">
-                            ✏️ Edit Profile
-                        </button>
-                    {% else %}
-                        <!-- 📞 Video Call Button -->
-                        <a href="{{ url_for('video_call', user_id=user.id) }}" class="btn btn-success btn-sm rounded-pill px-3 fw-bold">
-                            📞 Call {{ user.nickname }}
-                        </a>
-
-                        <!-- Follow Button -->
-                        <form action="{{ url_for('follow_user', user_id=user.id) }}" method="POST" class="d-inline">
-                            <button type="submit" class="btn btn-sm {% if is_following %}btn-outline-danger{% else %}btn-primary{% endif %} rounded-pill px-3">
-                                {% if is_following %}Unfollow{% else %}➕ Follow{% endif %}
-                            </button>
-                        </form>
-
-                        <!-- Profile Like Button -->
-                        <form action="{{ url_for('profile_like', user_id=user.id) }}" method="POST" class="d-inline">
-                            <button type="submit" class="btn btn-sm btn-outline-warning rounded-pill px-3">
-                                {{ user.safe_like_style }}
-                            </button>
-                        </form>
-
-                        <!-- Add Friend Request -->
-                        {% if not friendship %}
-                            <form action="{{ url_for('send_friend_request', user_id=user.id) }}" method="POST" class="d-inline">
-                                <button type="submit" class="btn btn-sm btn-outline-success rounded-pill px-3">🤝 Add Friend</button>
-                            </form>
-                        {% endif %}
-                    {% endif %}
-                </div>
+            <div>
+                <div style="font-size: 1.5rem; font-weight: bold; color: #f59e0b;">{{ profile_likes_count }}</div>
+                <div style="font-size: 0.8rem; color: #94a3b8; text-transform: uppercase;">Likes</div>
+            </div>
+            <div>
+                <div style="font-size: 1.5rem; font-weight: bold; color: #22c55e;">{{ user_posts|length }}</div>
+                <div style="font-size: 0.8rem; color: #94a3b8; text-transform: uppercase;">Posts</div>
             </div>
         </div>
 
-        <!-- User Stats Counter Box -->
-        <div class="row text-center mt-4 pt-3 border-top border-secondary">
-            <div class="col-4">
-                <h4 class="fw-bold mb-0 text-info">{{ followers_count }}</h4>
-                <small class="text-secondary text-uppercase fw-semibold">Followers</small>
-            </div>
-            <div class="col-4">
-                <h4 class="fw-bold mb-0 text-warning">{{ profile_likes_count }}</h4>
-                <small class="text-secondary text-uppercase fw-semibold">Likes</small>
-            </div>
-            <div class="col-4">
-                <h4 class="fw-bold mb-0 text-success">{{ user_posts|length }}</h4>
-                <small class="text-secondary text-uppercase fw-semibold">Posts</small>
-            </div>
-        </div>
     </div>
 
-    <!-- User Posts Stream -->
-    <h4 class="text-white mb-3">📌 Posts by {{ user.nickname }}</h4>
+    <!-- Posts Section -->
+    <h3 style="margin-top: 30px; margin-bottom: 15px; font-size: 1.2rem; color: #94a3b8;">📌 Posts by {{ user.nickname }}</h3>
+    
     {% if user_posts %}
-        <div class="row g-3">
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px;">
             {% for post in user_posts %}
-                <div class="col-12 col-md-6">
-                    <div class="card bg-dark text-white border-secondary h-100 shadow-sm">
-                        {% if post.image_url %}
-                            <img src="{{ post.image_url }}" class="card-img-top" alt="Post Image" style="max-height: 220px; object-fit: cover;">
-                        {% endif %}
-                        <div class="card-body">
-                            <h5 class="card-title text-info">{{ post.title }}</h5>
-                            <p class="card-text text-light opacity-75">{{ post.content }}</p>
-                            {% if post.download_link %}
-                                <a href="{{ post.download_link }}" class="btn btn-sm btn-outline-success" target="_blank">📥 Download Addon</a>
-                            {% endif %}
-                        </div>
-                    </div>
+                <div style="background: #1e293b; border: 1px solid #334155; border-radius: 12px; overflow: hidden; padding: 15px;">
+                    {% if post.image_url %}
+                        <img src="{{ post.image_url }}" alt="Post Image" style="width: 100%; height: 160px; object-fit: cover; border-radius: 8px; margin-bottom: 10px;">
+                    {% endif %}
+                    <h4 style="margin: 0 0 5px 0; color: #38bdf8;">{{ post.title }}</h4>
+                    <p style="color: #cbd5e1; font-size: 0.9rem; margin-bottom: 10px;">{{ post.content }}</p>
+                    {% if post.download_link %}
+                        <a href="{{ post.download_link }}" style="display: inline-block; background: #22c55e; color: white; text-decoration: none; padding: 5px 12px; border-radius: 6px; font-size: 0.8rem;" target="_blank">📥 Download Addon</a>
+                    {% endif %}
                 </div>
             {% endfor %}
         </div>
     {% else %}
-        <div class="alert alert-secondary text-center">No posts published yet.</div>
+        <p style="text-align: center; color: #64748b; background: #1e293b; padding: 20px; border-radius: 12px;">No posts published yet.</p>
     {% endif %}
+
 </div>
 
-<!-- Edit Profile Modal -->
+<!-- Simple Edit Modal -->
 {% if current_user.id == user.id %}
-<div class="modal fade" id="editProfileModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content bg-dark text-white border-secondary">
-            <div class="modal-header border-secondary">
-                <h5 class="modal-title">✏️ Edit Profile</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+<div id="editModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); justify-content: center; align-items: center; z-index: 1000;">
+    <div style="background: #1e293b; border: 1px solid #334155; padding: 25px; border-radius: 16px; width: 90%; max-width: 450px; color: white;">
+        <h3 style="margin-top: 0; color: #38bdf8;">Edit Profile</h3>
+        <form action="{{ url_for('edit_profile') }}" method="POST">
+            <div style="margin-bottom: 12px;">
+                <label style="display: block; font-size: 0.85rem; color: #94a3b8;">Nickname</label>
+                <input type="text" name="nickname" value="{{ user.nickname }}" required style="width: 100%; padding: 8px; background: #0f172a; border: 1px solid #334155; color: white; border-radius: 6px;">
             </div>
-            <form action="{{ url_for('edit_profile') }}" method="POST">
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label text-secondary">Nickname</label>
-                        <input type="text" name="nickname" class="form-control bg-secondary text-white border-0" value="{{ user.nickname }}" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label text-secondary">Profile Picture URL</label>
-                        <input type="url" name="pfp_url" class="form-control bg-secondary text-white border-0" value="{{ user.pfp_url }}">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label text-secondary">Bio</label>
-                        <textarea name="bio" class="form-control bg-secondary text-white border-0" rows="3">{{ user.bio }}</textarea>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label text-secondary">Profile Like Style</label>
-                        <select name="like_type_style" class="form-select bg-secondary text-white border-0">
-                            <option value="❤️ Classic Red" {% if user.like_type_style == '❤️ Classic Red' %}selected{% endif %}>❤️ Classic Red</option>
-                            <option value="🔥 Fire Power" {% if user.like_type_style == '🔥 Fire Power' %}selected{% endif %}>🔥 Fire Power</option>
-                            <option value="💎 Diamond Sparkle" {% if user.like_type_style == '💎 Diamond Sparkle' %}selected{% endif %}>💎 Diamond Sparkle</option>
-                            <option value="⚡ Emerald Shock" {% if user.like_type_style == '⚡ Emerald Shock' %}selected{% endif %}>⚡ Emerald Shock</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="modal-footer border-secondary">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-info">Save Changes</button>
-                </div>
-            </form>
-        </div>
+            <div style="margin-bottom: 12px;">
+                <label style="display: block; font-size: 0.85rem; color: #94a3b8;">Profile Picture URL</label>
+                <input type="url" name="pfp_url" value="{{ user.pfp_url }}" style="width: 100%; padding: 8px; background: #0f172a; border: 1px solid #334155; color: white; border-radius: 6px;">
+            </div>
+            <div style="margin-bottom: 12px;">
+                <label style="display: block; font-size: 0.85rem; color: #94a3b8;">Bio</label>
+                <textarea name="bio" rows="3" style="width: 100%; padding: 8px; background: #0f172a; border: 1px solid #334155; color: white; border-radius: 6px;">{{ user.bio }}</textarea>
+            </div>
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; font-size: 0.85rem; color: #94a3b8;">Profile Like Style</label>
+                <select name="like_type_style" style="width: 100%; padding: 8px; background: #0f172a; border: 1px solid #334155; color: white; border-radius: 6px;">
+                    <option value="❤️ Classic Red" {% if user.like_type_style == '❤️ Classic Red' %}selected{% endif %}>❤️ Classic Red</option>
+                    <option value="🔥 Fire Power" {% if user.like_type_style == '🔥 Fire Power' %}selected{% endif %}>🔥 Fire Power</option>
+                    <option value="💎 Diamond Sparkle" {% if user.like_type_style == '💎 Diamond Sparkle' %}selected{% endif %}>💎 Diamond Sparkle</option>
+                    <option value="⚡ Emerald Shock" {% if user.like_type_style == '⚡ Emerald Shock' %}selected{% endif %}>⚡ Emerald Shock</option>
+                </select>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button type="button" onclick="document.getElementById('editModal').style.display='none'" style="background: #475569; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer;">Cancel</button>
+                <button type="submit" style="background: #0284c7; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer;">Save</button>
+            </div>
+        </form>
     </div>
 </div>
 {% endif %}
