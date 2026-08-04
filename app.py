@@ -22,6 +22,31 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
+# ----------------- INAPPROPRIATE WORDS FILTER -----------------
+
+BANNED_WORDS = [
+    "sex", "lee", "sp", "nigger", "nigga", "porn", 
+    "fuck", "mf", "motherfucker", "dih", "dick", "shit"
+]
+
+def contains_banned_words(text):
+    """Returns True if text contains any banned words or invalid characters."""
+    if not text:
+        return False
+    
+    clean_text = text.lower()
+    
+    # Block dot-only or slash-only usernames/inputs
+    if clean_text.strip().replace('.', '') == '' or clean_text.strip().replace('/', '') == '':
+        return True
+
+    # Check for banned words inside the text
+    for word in BANNED_WORDS:
+        if word in clean_text:
+            return True
+            
+    return False
+
 # ----------------- DATABASE MODELS -----------------
 
 class User(UserMixin, db.Model):
@@ -177,9 +202,13 @@ init_database()
 def mailbox():
     if request.method == 'POST':
         receiver_id = request.form.get('receiver_id')
-        subject = request.form.get('subject')
-        content = request.form.get('content')
+        subject = request.form.get('subject', '').strip()
+        content = request.form.get('content', '').strip()
         
+        if contains_banned_words(subject) or contains_banned_words(content):
+            flash('Your mail contains inappropriate language! 🚫', 'danger')
+            return redirect(url_for('mailbox'))
+
         if receiver_id and subject and content:
             new_mail = Mail(
                 sender_id=current_user.id,
@@ -232,7 +261,11 @@ def dm(receiver_id):
     receiver = User.query.get_or_404(receiver_id)
     
     if request.method == 'POST':
-        content = request.form.get('content')
+        content = request.form.get('content', '').strip()
+        if contains_banned_words(content):
+            flash('Your message contains inappropriate language! 🚫', 'danger')
+            return redirect(url_for('dm', receiver_id=receiver_id))
+
         if content:
             msg = DirectMessage(sender_id=current_user.id, receiver_id=receiver_id, content=content)
             db.session.add(msg)
@@ -275,7 +308,16 @@ def register():
         confirm_password = request.form.get('confirm_password', '')
         
         if not username:
-            flash('Username cannot be blank!', 'danger')
+            flash('Username cannot be blank! 🚫', 'danger')
+            return redirect(url_for('register'))
+
+        # 🛑 PROFANITY & INVALID CHAR CHECK
+        if contains_banned_words(username):
+            flash('That username contains inappropriate or invalid words! Please choose another. 🚫', 'danger')
+            return redirect(url_for('register'))
+
+        if len(username) < 2:
+            flash('Username must be at least 2 characters long! 🚫', 'danger')
             return redirect(url_for('register'))
 
         if password != confirm_password:
@@ -318,15 +360,20 @@ def community():
 @app.route('/create_post', methods=['POST'])
 @login_required
 def create_post():
-    title = request.form.get('title')
-    content = request.form.get('content')
+    title = request.form.get('title', '').strip()
+    content = request.form.get('content', '').strip()
     image_url = request.form.get('image_url')
     download_link = request.form.get('download_link')
     feed_type = request.form.get('feed_type', 'community')
     
     if feed_type == 'official' and not current_user.is_admin:
         feed_type = 'community'
-        
+
+    # 🛑 CHECK FOR BANNED WORDS IN POSTS
+    if contains_banned_words(title) or contains_banned_words(content):
+        flash('Your post contains inappropriate language and was blocked! 🚫', 'danger')
+        return redirect(url_for('home' if feed_type == 'official' else 'community'))
+
     if title and content:
         new_post = Post(
             title=title,
@@ -438,7 +485,11 @@ def like_post(post_id):
 @app.route('/post/<int:post_id>/comment', methods=['POST'])
 @login_required
 def add_comment(post_id):
-    content = request.form.get('content')
+    content = request.form.get('content', '').strip()
+    if contains_banned_words(content):
+        flash('Your comment contains inappropriate language! 🚫', 'danger')
+        return redirect(request.referrer or url_for('home'))
+
     if content:
         comment = Comment(content=content, user_id=current_user.id, post_id=post_id)
         db.session.add(comment)
@@ -474,12 +525,21 @@ def profile_like(user_id):
         
     return redirect(request.referrer or url_for('home'))
 
-@app.route('/profile/<username>')
+@app.route('/profile/')
+@app.route('/profile/<path:username>')
 @login_required
-def profile(username):
+def profile(username=None):
+    if not username or username.strip() in ['.', '..', '']:
+        flash("Invalid profile username! 😅", "danger")
+        return redirect(url_for('home'))
+
     decoded_username = unquote(username).strip()
-    user = User.query.filter_by(username=decoded_username).first_or_404()
+    user = User.query.filter(User.username.ilike(decoded_username)).first()
     
+    if not user:
+        flash(f"User '{decoded_username}' not found!", "danger")
+        return redirect(url_for('home'))
+
     real_followers = Follow.query.filter_by(followed_id=user.id).count()
     real_profile_likes = ProfileLike.query.filter_by(receiver_id=user.id).count()
     is_following = Follow.query.filter_by(follower_id=current_user.id, followed_id=user.id).first() is not None
@@ -503,10 +563,14 @@ def profile(username):
 @app.route('/edit_profile', methods=['POST'])
 @login_required
 def edit_profile():
-    nickname = request.form.get('nickname')
+    nickname = request.form.get('nickname', '').strip()
     pfp_url = request.form.get('pfp_url')
-    bio = request.form.get('bio')
+    bio = request.form.get('bio', '').strip()
     
+    if contains_banned_words(nickname) or contains_banned_words(bio):
+        flash('Your profile changes contained inappropriate words! 🚫', 'danger')
+        return redirect(url_for('profile', username=current_user.username))
+
     if nickname:
         current_user.nickname = nickname
     if pfp_url:
