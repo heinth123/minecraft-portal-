@@ -17,11 +17,11 @@
         <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 5px;">
             <h2 style="margin: 0; font-size: 1.8rem; font-weight: 700;">{{ user.nickname }}</h2>
             
-            {% if user.is_admin %}
-    <!-- Verified Blue Checkmark Badge -->
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle;" title="Verified">
-        <path d="M22.5 12.5C22.5 13.9 21.8 15.1 21.3 16.3C20.8 17.5 20.6 19 19.6 19.7C18.6 20.4 17.2 20.1 15.9 20.3C14.6 20.5 13.4 21.5 12 21.5C10.6 21.5 9.4 20.5 8.1 20.3C6.8 20.1 5.4 20.4 4.4 19.7C3.4 19 3.2 17.5 2.7 16.3C2.2 15.1 1.5 13.9 1.5 12.5C1.5 11.1 2.2 9.9 2.7 8.7C3.2 7.5 3.4 6 4.4 5.3C5.4 4.6 6.8 4.9 8.1 4.7C9.4 4.5 10.6 3.5 12 3.5C13.4 3.5 14.6 4.5 15.9 4.7C17.2 4.9 18.6 4.6 19.6 5.3C20.6 6 20.8 7.5 21.3 8.7C21.8 9.9 22.5 11.1 22.5 12.5Z" fill="#1D9BF0"/>
-        <path d="M10.2 15.5L6.7 12L8.1 10.6L10.2 12.7L15.9 7L17.3 8.4L10.2 15.5Z" fill="white"/>
+           {% if user.is_admin %}
+    <!-- Sleek Verified Blue Checkmark -->
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle; margin-left: 4px;" title="Verified">
+        <path d="M22.25 12c0-1.43-.88-2.67-2.19-3.34.25-1.4-.2-2.85-1.23-3.88-1.03-1.03-2.48-1.48-3.88-1.23C14.28 2.24 13.04 1.36 11.61 1.36s-2.67.88-3.34 2.19c-1.4-.25-2.85.2-3.88 1.23-1.03 1.03-1.48 2.48-1.23 3.88C1.86 9.33.98 10.57.98 12s.88 2.67 2.19 3.34c-.25 1.4.2 2.85 1.23 3.88 1.03 1.03 2.48 1.48 3.88 1.23.67 1.31 1.91 2.19 3.34 2.19s2.67-.88 3.34-2.19c1.4.25 2.85-.2 3.88-1.23 1.03-1.03 1.48-2.48 1.23-3.88 1.31-.67 2.19-1.91 2.19-3.34z" fill="#1d9bf0"/>
+        <path d="M9.86 16.02l-4.13-4.13 1.41-1.41 2.72 2.72 6.83-6.83 1.41 1.41-8.24 8.24z" fill="#ffffff"/>
     </svg>
 {% endif %}
         </div>
