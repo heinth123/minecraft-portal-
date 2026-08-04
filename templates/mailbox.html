@@ -1,75 +1,78 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Mailbox - Minecraft Myanmar</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body class="bg-dark text-white">
+{% extends "base.html" %}
 
-<div class="container py-4">
-  <h2>📬 Your Mailbox</h2>
-  <a href="/" class="btn btn-outline-light mb-4">⬅️ Back to Home</a>
-
-  <!-- ADMIN MAIL COMPOSER -->
-  {% if current_user.is_admin %}
-  <div class="card bg-secondary text-white mb-4">
-    <div class="card-header fw-bold">🎁 Admin System Mail & Gift Dispatch</div>
-    <div class="card-body">
-      <form action="/admin/send_mail" method="POST">
-        <div class="row g-2 mb-2">
-          <div class="col-md-6">
-            <input type="text" name="username" class="form-control bg-dark text-white border-0" placeholder="Target Username" required>
-          </div>
-          <div class="col-md-6">
-            <input type="text" name="title" class="form-control bg-dark text-white border-0" placeholder="Mail Title (e.g. Welcome Reward!)">
-          </div>
-        </div>
-        <div class="mb-2">
-          <textarea name="text" class="form-control bg-dark text-white border-0" rows="2" placeholder="Write message..." required></textarea>
-        </div>
-        <div class="row g-2 mb-3">
-          <div class="col-md-6">
-            <select name="gift" class="form-select bg-dark text-white border-0">
-              <option value="">No Gift Attached</option>
-              <option value="blue_badge">💙 Verified Blue Badge</option>
-            </select>
-          </div>
-        </div>
-        <button type="submit" class="btn btn-warning fw-bold">Send Mail 🚀</button>
-      </form>
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between border-b border-slate-700 pb-4">
+        <h1 class="text-2xl font-bold text-emerald-400 flex items-center gap-3">
+            <i class="fa-solid fa-envelope-open-text"></i> Mail Box
+        </h1>
+        <span class="text-sm text-slate-400">Your personal inbox & notifications</span>
     </div>
-  </div>
-  {% endif %}
 
-  <!-- MAIL LIST -->
-  <div class="list-group">
-    {% for msg in messages %}
-    <div class="list-group-item bg-secondary text-white mb-2 rounded border-0">
-      <div class="d-flex justify-content-between align-items-center">
-        <h5 class="mb-1">📩 {{ msg.title }}</h5>
-        <small class="text-light">{{ msg.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
-      </div>
-      <p class="mb-2">{{ msg.text }}</p>
-      
-      {% if msg.gift %}
-        <div class="mt-2 p-2 bg-dark rounded d-flex justify-content-between align-items-center">
-          <span>🎁 <b>Gift:</b> {{ '💙 Verified Blue Badge' if msg.gift == 'blue_badge' else msg.gift }}</span>
-          {% if not msg.is_claimed %}
-            <form action="/mail/claim/{{ msg.id }}" method="POST">
-              <button class="btn btn-success btn-sm">Claim Gift 🎉</button>
-            </form>
-          {% else %}
-            <span class="badge bg-secondary">Claimed ✅</span>
-          {% endif %}
+    <!-- Friend Requests Section -->
+    {% if friend_requests %}
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-lg">
+        <h2 class="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+            <i class="fa-solid fa-user-clock text-amber-400"></i> Friend Requests
+        </h2>
+        <div class="space-y-3">
+            {% for req in friend_requests %}
+            <div class="flex items-center justify-between bg-slate-900/60 p-3 rounded-xl border border-slate-700/50">
+                <div class="flex items-center gap-3">
+                    <img src="{{ req.sender.safe_pfp }}" class="w-10 h-10 rounded-full object-cover">
+                    <div>
+                        <p class="font-medium text-slate-200">{{ req.sender.nickname }} <span class="text-xs text-slate-400">(@{{ req.sender.username }})</span></p>
+                        <p class="text-xs text-slate-400">Sent you a friend request</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <form action="{{ url_for('accept_friend_request', request_id=req.id) }}" method="POST">
+                        <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-3 py-1.5 rounded-lg font-medium transition">
+                            Accept
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
         </div>
-      {% endif %}
     </div>
-    {% else %}
-      <p class="text-secondary">Your inbox is empty! 📭</p>
-    {% endfor %}
-  </div>
+    {% endif %}
+
+    <!-- Direct Messages Inbox -->
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-lg">
+        <h2 class="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+            <i class="fa-solid fa-inbox text-emerald-400"></i> Received Messages
+        </h2>
+        
+        {% if dms %}
+        <div class="space-y-3">
+            {% for msg in dms %}
+            <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-700/50 flex items-start gap-4 hover:border-emerald-500/40 transition">
+                <img src="{{ msg.sender.safe_pfp }}" class="w-10 h-10 rounded-full object-cover mt-1">
+                <div class="flex-1">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="font-bold text-slate-200 text-sm">{{ msg.sender.nickname }}</span>
+                        <span class="text-xs text-slate-500">{{ msg.created_at.strftime('%Y-%m-%d %H:%M') if msg.created_at else '' }}</span>
+                    </div>
+                    <p class="text-slate-300 text-sm bg-slate-800/80 p-3 rounded-lg border border-slate-700/30">
+                        {{ msg.content }}
+                    </p>
+                    <div class="mt-2 text-right">
+                        <a href="{{ url_for('dm', receiver_id=msg.sender.id) }}" class="text-xs text-emerald-400 hover:underline inline-flex items-center gap-1">
+                            Reply <i class="fa-solid fa-reply"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-8 text-slate-400">
+            <i class="fa-solid fa-envelope-open text-4xl mb-2 text-slate-600"></i>
+            <p>Your inbox is empty right now!</p>
+        </div>
+        {% endif %}
+    </div>
 </div>
-
-</body>
-</html>
+{% endblock %}
