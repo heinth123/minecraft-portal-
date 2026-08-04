@@ -162,7 +162,19 @@ def init_database():
 init_database()
 
 # ----------------- ROUTES -----------------
-
+@app.route('/mailbox')
+@login_required
+def mailbox():
+    # Fetch direct messages received by the user
+    received_dms = DirectMessage.query.filter_by(receiver_id=current_user.id)\
+        .order_by(DirectMessage.created_at.desc()).all()
+    
+    # Fetch pending friend requests
+    pending_friends = Friendship.query.filter_by(receiver_id=current_user.id, status='pending')\
+        .order_by(Friendship.created_at.desc()).all()
+    
+    return render_template('mailbox.html', dms=received_dms, friend_requests=pending_friends)
+    
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
