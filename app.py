@@ -1,4 +1,5 @@
 import os
+import re
 from datetime import datetime, timezone
 from urllib.parse import unquote
 from flask import Flask, render_template, request, redirect, url_for, flash
@@ -40,9 +41,10 @@ def contains_banned_words(text):
     if clean_text.strip().replace('.', '') == '' or clean_text.strip().replace('/', '') == '':
         return True
 
-    # Check for banned words inside the text
+    # Check for whole banned words using regular expressions
     for word in BANNED_WORDS:
-        if word in clean_text:
+        pattern = r'\b' + re.escape(word) + r'\b'
+        if re.search(pattern, clean_text):
             return True
             
     return False
@@ -196,6 +198,11 @@ def init_database():
 init_database()
 
 # ----------------- ROUTES -----------------
+@app.route('/call/<int:user_id>')
+@login_required
+def video_call(user_id):
+    target_user = User.query.get_or_404(user_id)
+    return render_template('video_call.html', target_user=target_user)
 
 @app.route('/mailbox', methods=['GET', 'POST'])
 @login_required
@@ -270,6 +277,7 @@ def dm(receiver_id):
             msg = DirectMessage(sender_id=current_user.id, receiver_id=receiver_id, content=content)
             db.session.add(msg)
             db.session.commit()
+            return redirect(url_for('dm', receiver_id=receiver_id))
             
     messages = DirectMessage.query.filter(
         ((DirectMessage.sender_id == current_user.id) & (DirectMessage.receiver_id == receiver_id)) |
@@ -311,7 +319,6 @@ def register():
             flash('Username cannot be blank! 🚫', 'danger')
             return redirect(url_for('register'))
 
-        # 🛑 PROFANITY & INVALID CHAR CHECK
         if contains_banned_words(username):
             flash('That username contains inappropriate or invalid words! Please choose another. 🚫', 'danger')
             return redirect(url_for('register'))
@@ -369,7 +376,6 @@ def create_post():
     if feed_type == 'official' and not current_user.is_admin:
         feed_type = 'community'
 
-    # 🛑 CHECK FOR BANNED WORDS IN POSTS
     if contains_banned_words(title) or contains_banned_words(content):
         flash('Your post contains inappropriate language and was blocked! 🚫', 'danger')
         return redirect(url_for('home' if feed_type == 'official' else 'community'))
@@ -529,9 +535,8 @@ def profile_like(user_id):
 @app.route('/profile/<path:username>')
 @login_required
 def profile(username=None):
-    if not username or username.strip() in ['.', '..', '']:
-        flash("Invalid profile username! 😅", "danger")
-        return redirect(url_for('home'))
+    if not username:
+        return redirect(url_for('profile', username=current_user.username))
 
     decoded_username = unquote(username).strip()
     user = User.query.filter(User.username.ilike(decoded_username)).first()
