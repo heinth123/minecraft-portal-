@@ -15,33 +15,6 @@
         </a>
     </div>
 
-    <!-- PENDING FRIEND REQUESTS -->
-    {% if pending_requests %}
-    <div class="bg-gradient-to-r from-amber-950/40 via-slate-900 to-slate-900 border border-amber-500/30 rounded-2xl p-5 shadow-xl">
-        <h2 class="text-lg font-bold text-amber-400 mb-4 flex items-center gap-2">
-            <i class="fa-solid fa-bell animate-bounce"></i> Pending Friend Requests ({{ pending_requests|length }})
-        </h2>
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {% for req in pending_requests %}
-            <div class="bg-slate-800/90 border border-amber-500/20 rounded-xl p-4 flex items-center justify-between gap-3 shadow-md">
-                <div class="flex items-center gap-3 truncate">
-                    <img src="{{ req.sender.safe_pfp }}" class="w-11 h-11 rounded-xl object-cover border-2 border-amber-500/50 shadow">
-                    <div class="truncate">
-                        <p class="font-bold text-slate-100 text-sm truncate">{{ req.sender.nickname }}</p>
-                        <p class="text-xs text-slate-400 truncate">@{{ req.sender.username }}</p>
-                    </div>
-                </div>
-                <form action="{{ url_for('accept_friend_request', request_id=req.id) }}" method="POST">
-                    <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-2 rounded-lg transition shadow">
-                        Accept
-                    </button>
-                </form>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-    {% endif %}
-
     <!-- YOUR FRIENDS LIST -->
     <div class="space-y-4">
         <h2 class="text-xl font-bold text-slate-200 flex items-center gap-2">
@@ -55,17 +28,24 @@
                     <div class="flex items-center gap-3">
                         <div class="relative">
                             <img src="{{ friend.safe_pfp }}" class="w-14 h-14 rounded-2xl object-cover border-2 border-emerald-500/40 shadow-md group-hover:scale-105 transition">
-                            {% if friend.is_admin %}
-                            <span class="absolute -top-1 -right-1 bg-amber-500 text-slate-950 text-[10px] font-black px-1.5 py-0.5 rounded-full shadow border border-amber-300" title="Admin">
-                                ★
+                            {% if friend.is_admin or friend.is_verified %}
+                            <span class="absolute -bottom-1 -right-1 bg-slate-900 rounded-full p-0.5 shadow">
+                                <svg class="w-4 h-4 text-[#1d9bf0]" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M22.25 12c0-1.43-.88-2.67-2.19-3.19.46-1.39.02-2.96-1.08-3.88-1.1-1.1-2.67-1.54-4.06-1.08C14.4 2.54 13.16 1.66 11.73 1.66s-2.67.88-3.19 2.19c-1.39-.46-2.96-.02-3.88 1.08-1.1 1.1-1.54 2.67-1.08 4.06C2.22 9.51 1.34 10.75 1.34 12.18s.88 2.67 2.19 3.19c-.46 1.39-.02 2.96 1.08 3.88 1.1 1.1 2.67 1.54 4.06 1.08 1.04 1.31 2.28 2.19 3.71 2.19s2.67-.88 3.19-2.19c1.39.46 2.96.02 3.88-1.08 1.1-1.1 1.54-2.67 1.08-4.06 1.31-.52 2.19-1.76 2.19-3.19zm-11.71 4.2l-3.54-3.54 1.41-1.41 2.13 2.12 6.01-6.01 1.41 1.41-7.42 7.43z"/>
+                                </svg>
                             </span>
                             {% endif %}
                         </div>
                         <div>
-                            <div class="flex items-center gap-2">
+                            <div class="flex items-center gap-1">
                                 <a href="{{ url_for('profile', username=friend.username) }}" class="font-bold text-slate-100 group-hover:text-emerald-400 transition">
                                     {{ friend.nickname }}
                                 </a>
+                                {% if friend.is_admin or friend.is_verified %}
+                                <svg class="w-4 h-4 text-[#1d9bf0] shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M22.25 12c0-1.43-.88-2.67-2.19-3.19.46-1.39.02-2.96-1.08-3.88-1.1-1.1-2.67-1.54-4.06-1.08C14.4 2.54 13.16 1.66 11.73 1.66s-2.67.88-3.19 2.19c-1.39-.46-2.96-.02-3.88 1.08-1.1 1.1-1.54 2.67-1.08 4.06C2.22 9.51 1.34 10.75 1.34 12.18s.88 2.67 2.19 3.19c-.46 1.39-.02 2.96 1.08 3.88 1.1 1.1 2.67 1.54 4.06 1.08 1.04 1.31 2.28 2.19 3.71 2.19s2.67-.88 3.19-2.19c1.39.46 2.96.02 3.88-1.08 1.1-1.1 1.54-2.67 1.08-4.06 1.31-.52 2.19-1.76 2.19-3.19zm-11.71 4.2l-3.54-3.54 1.41-1.41 2.13 2.12 6.01-6.01 1.41 1.41-7.42 7.43z"/>
+                                </svg>
+                                {% endif %}
                             </div>
                             <p class="text-xs text-slate-400">@{{ friend.username }}</p>
                             <span class="inline-block mt-1 bg-emerald-500/10 text-emerald-400 text-[11px] font-semibold px-2 py-0.5 rounded-md border border-emerald-500/20">
