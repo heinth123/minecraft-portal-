@@ -1,67 +1,103 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container mt-4">
-    <h2 class="mb-4">👥 Your Friends & Requests</h2>
+<div class="max-w-6xl mx-auto space-y-8">
+    <!-- Header -->
+    <div class="flex items-center justify-between border-b border-slate-700/80 pb-4">
+        <div>
+            <h1 class="text-3xl font-extrabold text-emerald-400 flex items-center gap-3 drop-shadow">
+                <i class="fa-solid fa-user-group"></i> Community & Friends
+            </h1>
+            <p class="text-sm text-slate-400 mt-1">Connect with Minecraft Myanmar players & legendary crafters!</p>
+        </div>
+        <a href="{{ url_for('search_friends') }}" class="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-4 py-2 rounded-xl transition shadow-lg shadow-emerald-900/40 flex items-center gap-2">
+            <i class="fa-solid fa-magnifying-glass"></i> Find Players
+        </a>
+    </div>
 
-    <!-- PENDING FRIEND REQUESTS SECTION -->
+    <!-- PENDING FRIEND REQUESTS -->
     {% if pending_requests %}
-    <div class="card p-3 mb-4" style="background-color: #1e293b; border: 1px solid #eab308;">
-        <h4 class="text-warning mb-3">🔔 Pending Friend Requests ({{ pending_requests|length }})</h4>
-        <div class="list-group">
+    <div class="bg-gradient-to-r from-amber-950/40 via-slate-900 to-slate-900 border border-amber-500/30 rounded-2xl p-5 shadow-xl">
+        <h2 class="text-lg font-bold text-amber-400 mb-4 flex items-center gap-2">
+            <i class="fa-solid fa-bell animate-bounce"></i> Pending Friend Requests ({{ pending_requests|length }})
+        </h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             {% for req in pending_requests %}
-            <div class="list-group-item d-flex justify-content-between align-items-center" style="background-color: #0f172a;">
-                <div class="d-flex align-items-center">
-                    <a href="{{ url_for('profile', username=req.sender.username) }}">
-                        <img src="{{ req.sender.pfp_url }}" alt="PFP" class="rounded-circle me-3" style="width: 45px; height: 45px; object-fit: cover;">
-                    </a>
-                    <div>
-                        <a href="{{ url_for('profile', username=req.sender.username) }}" class="text-decoration-none text-white fw-bold">
-                            {{ req.sender.nickname }}
-                        </a>
-                        <small class="text-muted d-block">@{{ req.sender.username }}</small>
+            <div class="bg-slate-800/90 border border-amber-500/20 rounded-xl p-4 flex items-center justify-between gap-3 shadow-md">
+                <div class="flex items-center gap-3 truncate">
+                    <img src="{{ req.sender.safe_pfp }}" class="w-11 h-11 rounded-xl object-cover border-2 border-amber-500/50 shadow">
+                    <div class="truncate">
+                        <p class="font-bold text-slate-100 text-sm truncate">{{ req.sender.nickname }}</p>
+                        <p class="text-xs text-slate-400 truncate">@{{ req.sender.username }}</p>
                     </div>
                 </div>
-                <div>
-                    <form action="{{ url_for('accept_friend_request', request_id=req.id) }}" method="POST" class="d-inline">
-                        <button type="submit" class="btn btn-sm btn-success">Accept ✅</button>
-                    </form>
-                </div>
+                <form action="{{ url_for('accept_friend_request', request_id=req.id) }}" method="POST">
+                    <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-2 rounded-lg transition shadow">
+                        Accept
+                    </button>
+                </form>
             </div>
             {% endfor %}
         </div>
     </div>
     {% endif %}
 
-    <!-- ACCEPTED FRIENDS LIST -->
-    <div class="card p-3 mb-4" style="background-color: #1e293b; border: 1px solid #334155;">
-        <h4 class="text-success mb-3">🤝 My Friends ({{ friends|length }})</h4>
+    <!-- YOUR FRIENDS LIST -->
+    <div class="space-y-4">
+        <h2 class="text-xl font-bold text-slate-200 flex items-center gap-2">
+            <i class="fa-solid fa-user-check text-emerald-400"></i> Your Friends
+        </h2>
         {% if friends %}
-        <div class="list-group">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {% for friend in friends %}
-            <div class="list-group-item d-flex justify-content-between align-items-center" style="background-color: #0f172a;">
-                <div class="d-flex align-items-center">
-                    <a href="{{ url_for('profile', username=friend.username) }}">
-                        <img src="{{ friend.pfp_url }}" alt="PFP" class="rounded-circle me-3" style="width: 45px; height: 45px; object-fit: cover;">
-                    </a>
-                    <div>
-                        <a href="{{ url_for('profile', username=friend.username) }}" class="text-decoration-none text-white fw-bold">
-                            {{ friend.nickname }}
-                        </a>
-                        <small class="text-muted d-block">@{{ friend.username }}</small>
+            <div class="bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 hover:border-emerald-500/50 rounded-2xl p-5 shadow-lg transition duration-200 flex flex-col justify-between group">
+                <div class="flex items-start justify-between gap-3 mb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="relative">
+                            <img src="{{ friend.safe_pfp }}" class="w-14 h-14 rounded-2xl object-cover border-2 border-emerald-500/40 shadow-md group-hover:scale-105 transition">
+                            {% if friend.is_admin %}
+                            <span class="absolute -top-1 -right-1 bg-amber-500 text-slate-950 text-[10px] font-black px-1.5 py-0.5 rounded-full shadow border border-amber-300" title="Admin">
+                                ★
+                            </span>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <a href="{{ url_for('profile', username=friend.username) }}" class="font-bold text-slate-100 group-hover:text-emerald-400 transition">
+                                    {{ friend.nickname }}
+                                </a>
+                            </div>
+                            <p class="text-xs text-slate-400">@{{ friend.username }}</p>
+                            <span class="inline-block mt-1 bg-emerald-500/10 text-emerald-400 text-[11px] font-semibold px-2 py-0.5 rounded-md border border-emerald-500/20">
+                                🤝 Friend
+                            </span>
+                        </div>
                     </div>
                 </div>
-                <div class="d-flex gap-2">
-                    <a href="{{ url_for('dm', receiver_id=friend.id) }}" class="btn btn-sm btn-primary">💬 Chat</a>
+
+                <p class="text-xs text-slate-300 bg-slate-900/60 p-2.5 rounded-xl border border-slate-800 mb-4 italic line-clamp-2">
+                    "{{ friend.bio }}"
+                </p>
+
+                <div class="flex items-center gap-2 pt-2 border-t border-slate-700/60">
+                    <a href="{{ url_for('dm', receiver_id=friend.id) }}" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2 rounded-xl text-xs text-center transition shadow-md flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-comment-dots"></i> Chat
+                    </a>
                     <form action="{{ url_for('remove_friend', user_id=friend.id) }}" method="POST">
-                        <button type="submit" class="btn btn-sm btn-outline-danger">Remove ❌</button>
+                        <button type="submit" onclick="return confirm('Remove friend?')" class="bg-rose-500/10 hover:bg-rose-600 text-rose-400 hover:text-white p-2 rounded-xl text-xs transition border border-rose-500/20">
+                            <i class="fa-solid fa-user-minus"></i>
+                        </button>
                     </form>
                 </div>
             </div>
             {% endfor %}
         </div>
         {% else %}
-        <p class="text-muted">You haven't added any friends yet! Head over to <a href="{{ url_for('search_friends') }}" class="text-info">Find Friends</a> to start connecting! 🚀</p>
+        <div class="bg-slate-800/50 border border-slate-700/60 rounded-2xl p-8 text-center text-slate-400">
+            <i class="fa-solid fa-user-slash text-4xl mb-3 text-slate-600"></i>
+            <p class="text-base font-semibold">No friends added yet!</p>
+            <p class="text-xs text-slate-500 mt-1">Use the "Find Players" button above to explore and add people!</p>
+        </div>
         {% endif %}
     </div>
 </div>
