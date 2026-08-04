@@ -353,12 +353,40 @@ def logout():
     logout_user()
     return redirect(url_for('login'))
 
-@app.route('/')
+@app.route('/', methods=['GET', 'POST'])
 @login_required
 def home():
+    if request.method == 'POST':
+        title = request.form.get('title', '').strip()
+        content = request.form.get('content', '').strip()
+        image_url = request.form.get('image_url')
+        download_link = request.form.get('download_link')
+        
+        # Default to 'official' if admin posting from home, else 'community'
+        feed_type = 'official' if current_user.is_admin else 'community'
+
+        if contains_banned_words(title) or contains_banned_words(content):
+            flash('Your post contains inappropriate language! 🚫', 'danger')
+            return redirect(url_for('home'))
+
+        if title and content:
+            new_post = Post(
+                title=title,
+                content=content,
+                image_url=image_url,
+                download_link=download_link,
+                feed_type=feed_type,
+                user_id=current_user.id
+            )
+            db.session.add(new_post)
+            db.session.commit()
+            flash('Published successfully! ✨', 'success')
+            return redirect(url_for('home'))
+
+    # Display posts (show official or all posts depending on your design)
     posts = Post.query.filter_by(feed_type='official').order_by(Post.id.desc()).all()
     return render_template('index.html', posts=posts, feed_title="🏠 Official Announcements & Addons")
-
+    
 @app.route('/community')
 @login_required
 def community():
