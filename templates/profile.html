@@ -1,110 +1,97 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ user.nickname }}'s Profile</title>
-    <style>
-        :root { --bg-dark: #0f172a; --card-bg: #1e293b; --green: #22c55e; --text-main: #f8fafc; --text-muted: #94a3b8; }
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, sans-serif; }
-        body { background-color: var(--bg-dark); color: var(--text-main); min-height: 100vh; }
-        nav { display: flex; justify-content: space-between; align-items: center; padding: 1rem 2rem; background: #1e293b; border-bottom: 1px solid #334155; }
-        .nav-links { display: flex; gap: 15px; }
-        .nav-links a { color: var(--text-main); text-decoration: none; font-weight: bold; }
-        .container { max-width: 700px; margin: 2rem auto; padding: 0 1rem; }
-        .profile-card { background: var(--card-bg); border-radius: 16px; padding: 2rem; border: 1px solid #334155; text-align: center; }
-        .pfp-main { width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 3px solid var(--green); }
-        .badge-verified { color: #38bdf8; }
-        .stats { display: flex; justify-content: center; gap: 30px; margin: 1.5rem 0; }
-        .stat-box div:first-child { font-size: 1.4rem; font-weight: bold; color: var(--green); }
-        .stat-box div:last-child { font-size: 0.85rem; color: var(--text-muted); }
-        button { padding: 0.6rem 1.2rem; background: var(--green); color: black; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; margin: 5px; }
-        .admin-panel { background: #0f172a; border: 1px dashed #38bdf8; padding: 1rem; border-radius: 8px; margin-top: 1.5rem; text-align: left; }
-        input { width: 100%; padding: 0.6rem; background: #1e293b; border: 1px solid #334155; color: white; border-radius: 6px; margin-top: 4px; margin-bottom: 10px; }
-    </style>
-</head>
-<body>
+{% extends "base.html" %}
 
-    <nav>
-        <span style="font-weight: bold; color: var(--green);">⛏️ Minecraft Myanmar</span>
-        <div class="nav-links">
-            <a href="/">🏠 Home</a>
-            <a href="/community">🌐 Community</a>
-            <a href="/chat">💬 Chat</a>
-            <a href="/profile/{{ current_user.username }}">👤 Profile</a>
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-8">
+
+    <!-- PROFILE CARD -->
+    <div class="bg-slate-800/90 border border-slate-700/80 rounded-2xl p-8 shadow-2xl relative overflow-hidden text-center">
+        
+        <!-- Profile Picture -->
+        <div class="relative inline-block mb-4">
+            <img src="{{ user.safe_pfp }}" class="w-28 h-28 rounded-full object-cover border-4 border-emerald-500/50 shadow-xl mx-auto">
+            {% if user.is_admin or user.is_verified %}
+            <span class="absolute bottom-0 right-0 bg-slate-900 rounded-full p-1 shadow-lg">
+                <svg class="w-6 h-6 text-[#1d9bf0]" viewBox="0 0 24 24" fill="currentColor" title="Verified Crafter">
+                    <path d="M22.25 12c0-1.43-.88-2.67-2.19-3.19.46-1.39.02-2.96-1.08-3.88-1.1-1.1-2.67-1.54-4.06-1.08C14.4 2.54 13.16 1.66 11.73 1.66s-2.67.88-3.19 2.19c-1.39-.46-2.96-.02-3.88 1.08-1.1 1.1-1.54 2.67-1.08 4.06C2.22 9.51 1.34 10.75 1.34 12.18s.88 2.67 2.19 3.19c-.46 1.39-.02 2.96 1.08 3.88 1.1 1.1 2.67 1.54 4.06 1.08 1.04 1.31 2.28 2.19 3.71 2.19s2.67-.88 3.19-2.19c1.39.46 2.96.02 3.88-1.08 1.1-1.1 1.54-2.67 1.08-4.06 1.31-.52 2.19-1.76 2.19-3.19zm-11.71 4.2l-3.54-3.54 1.41-1.41 2.13 2.12 6.01-6.01 1.41 1.41-7.42 7.43z"/>
+                </svg>
+            </span>
+            {% endif %}
         </div>
-    </nav>
 
-    <div class="container">
-        <div class="profile-card">
-            <img src="{{ user.pfp_url }}" class="pfp-main">
-            <h2 style="margin-top: 10px;">
-                {{ user.nickname }}
-                {% if user.is_admin %}<span class="badge-verified">✔</span>{% endif %}
-            </h2>
-            <p style="color: var(--text-muted);">@{{ user.username }}</p>
-            <p style="margin-top: 10px;">{{ user.bio }}</p>
+        <!-- Name & Blue Badge -->
+        <div class="flex items-center justify-center gap-2 mb-1">
+            <h1 class="text-3xl font-extrabold text-slate-100">
+                {{ user.nickname or user.username }}
+            </h1>
+            {% if user.is_admin or user.is_verified %}
+            <svg class="w-6 h-6 text-[#1d9bf0] shrink-0" viewBox="0 0 24 24" fill="currentColor" title="Verified Crafter">
+                <path d="M22.25 12c0-1.43-.88-2.67-2.19-3.19.46-1.39.02-2.96-1.08-3.88-1.1-1.1-2.67-1.54-4.06-1.08C14.4 2.54 13.16 1.66 11.73 1.66s-2.67.88-3.19 2.19c-1.39-.46-2.96-.02-3.88 1.08-1.1 1.1-1.54 2.67-1.08 4.06C2.22 9.51 1.34 10.75 1.34 12.18s.88 2.67 2.19 3.19c-.46 1.39-.02 2.96 1.08 3.88 1.1 1.1 2.67 1.54 4.06 1.08 1.04 1.31 2.28 2.19 3.71 2.19s2.67-.88 3.19-2.19c1.39.46 2.96.02 3.88-1.08 1.1-1.1 1.54-2.67 1.08-4.06 1.31-.52 2.19-1.76 2.19-3.19zm-11.71 4.2l-3.54-3.54 1.41-1.41 2.13 2.12 6.01-6.01 1.41 1.41-7.42 7.43z"/>
+            </svg>
+            {% endif %}
+        </div>
+        
+        <p class="text-sm text-slate-400 mb-4">@{{ user.username }}</p>
 
-            <div class="stats">
-                <div class="stat-box">
-                    <div>{{ followers_count }}</div>
-                    <div>Followers</div>
-                </div>
-                <div class="stat-box">
-                    <div>{{ profile_likes_count }}</div>
-                    <div>Profile Likes</div>
-                </div>
+        <!-- Bio -->
+        {% if user.bio %}
+        <p class="text-slate-300 max-w-lg mx-auto text-sm italic mb-6">
+            "{{ user.bio }}"
+        </p>
+        {% endif %}
+
+        <!-- Stats -->
+        <div class="flex justify-center items-center gap-8 border-t border-b border-slate-700/60 py-4 my-6">
+            <div>
+                <div class="text-xl font-bold text-emerald-400">{{ user.fake_followers or '0' }}</div>
+                <div class="text-xs text-slate-400 uppercase tracking-wider">Followers</div>
             </div>
-
-            <!-- Follow & Daily Profile Like Buttons -->
-            {% if current_user.id != user.id %}
-                <form action="/user/{{ user.id }}/follow" method="POST" style="display:inline;">
-                    <button type="submit" style="background: {% if is_following %}#334155{% else %}var(--green){% endif %}; color: white;">
-                        {% if is_following %}Following{% else %}Follow +{% endif %}
-                    </button>
-                </form>
-
-                <form action="/user/{{ user.id }}/profile_like" method="POST" style="display:inline;">
-                    <button type="submit" style="background: #ef4444; color: white;">❤️ Like Profile Today</button>
-                </form>
-            {% endif %}
-
-            <!-- Edit Own Profile -->
-            {% if current_user.id == user.id %}
-                <details style="margin-top: 1.5rem; text-align: left; background: #0f172a; padding: 1rem; border-radius: 8px;">
-                    <summary style="cursor: pointer; color: var(--green); font-weight: bold;">✏️ Edit Profile</summary>
-                    <form action="/edit_profile" method="POST" style="margin-top: 10px;">
-                        <label style="font-size: 0.8rem; color: var(--text-muted);">Display Nickname</label>
-                        <input type="text" name="nickname" value="{{ user.nickname }}">
-                        
-                        <label style="font-size: 0.8rem; color: var(--text-muted);">Custom PFP Image URL</label>
-                        <input type="text" name="pfp_url" value="{{ user.pfp_url }}">
-                        
-                        <label style="font-size: 0.8rem; color: var(--text-muted);">Bio</label>
-                        <input type="text" name="bio" value="{{ user.bio }}">
-                        
-                        <button type="submit">Save Profile Changes</button>
-                    </form>
-                </details>
-            {% endif %}
-
-            <!-- Admin Fake Stats Boost -->
-            {% if current_user.is_admin %}
-                <div class="admin-panel">
-                    <h4 style="color: #38bdf8;">🪄 Admin Boost (Set Fake Stats)</h4>
-                    <form action="/admin/fake_stats/{{ user.id }}" method="POST">
-                        <label style="font-size: 0.8rem; color: var(--text-muted);">Fake Followers String (e.g. 1.2M)</label>
-                        <input type="text" name="fake_followers" value="{{ user.fake_followers or '' }}">
-
-                        <label style="font-size: 0.8rem; color: var(--text-muted);">Fake Profile Likes String (e.g. 3.5B)</label>
-                        <input type="text" name="fake_likes" value="{{ user.fake_likes or '' }}">
-
-                        <button type="submit" style="background: #38bdf8;">Apply Admin Override ⚡</button>
-                    </form>
-                </div>
-            {% endif %}
+            <div class="h-8 w-px bg-slate-700"></div>
+            <div>
+                <div class="text-xl font-bold text-emerald-400">{{ user.fake_likes or '0' }}</div>
+                <div class="text-xs text-slate-400 uppercase tracking-wider">Profile Likes</div>
+            </div>
         </div>
+
+        <!-- Action Buttons -->
+        {% if current_user.is_authenticated and current_user.id == user.id %}
+        <a href="{{ url_for('edit_profile') }}" class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-6 py-2.5 rounded-xl transition shadow-lg">
+            <i class="fa-solid fa-pen-to-square"></i> Edit Profile
+        </a>
+        {% elif current_user.is_authenticated %}
+        <div class="flex justify-center gap-3">
+            <form action="{{ url_for('send_friend_request', user_id=user.id) }}" method="POST">
+                <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-5 py-2 rounded-xl text-sm transition shadow flex items-center gap-2">
+                    <i class="fa-solid fa-user-plus"></i> Add Friend
+                </button>
+            </form>
+            <a href="{{ url_for('dm', receiver_id=user.id) }}" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-5 py-2 rounded-xl text-sm font-bold transition flex items-center gap-2">
+                <i class="fa-solid fa-comment"></i> Chat
+            </a>
+        </div>
+        {% endif %}
     </div>
 
-</body>
-</html>
+    <!-- ADMIN BOOST PANEL (Owner/Admin Only) -->
+    {% if current_user.is_authenticated and current_user.is_admin and current_user.id == user.id %}
+    <div class="bg-slate-800/80 border border-amber-500/40 rounded-2xl p-6 shadow-xl space-y-4">
+        <h2 class="text-lg font-bold text-amber-400 flex items-center gap-2">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> Admin Boost (Set Fake Stats)
+        </h2>
+        <form action="{{ url_for('update_stats') }}" method="POST" class="space-y-4">
+            <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1">Fake Followers String (e.g. 1.2M, 327k)</label>
+                <input type="text" name="fake_followers" value="{{ user.fake_followers or '' }}" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm text-slate-100 focus:outline-none focus:border-amber-400">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1">Fake Profile Likes String (e.g. 2.1M)</label>
+                <input type="text" name="fake_likes" value="{{ user.fake_likes or '' }}" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm text-slate-100 focus:outline-none focus:border-amber-400">
+            </div>
+            <button type="submit" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-5 py-2.5 rounded-xl text-sm transition shadow">
+                Save Boosted Stats
+            </button>
+        </form>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}
