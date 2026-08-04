@@ -1,97 +1,159 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto space-y-8">
+<div class="container py-4" style="max-width: 800px;">
 
-    <!-- PROFILE CARD -->
-    <div class="bg-slate-800/90 border border-slate-700/80 rounded-2xl p-8 shadow-2xl relative overflow-hidden text-center">
-        
-        <!-- Profile Picture -->
-        <div class="relative inline-block mb-4">
-            <img src="{{ user.safe_pfp }}" class="w-28 h-28 rounded-full object-cover border-4 border-emerald-500/50 shadow-xl mx-auto">
-            {% if user.is_admin or user.is_verified %}
-            <span class="absolute bottom-0 right-0 bg-slate-900 rounded-full p-1 shadow-lg">
-                <svg class="w-6 h-6 text-[#1d9bf0]" viewBox="0 0 24 24" fill="currentColor" title="Verified Crafter">
-                    <path d="M22.25 12c0-1.43-.88-2.67-2.19-3.19.46-1.39.02-2.96-1.08-3.88-1.1-1.1-2.67-1.54-4.06-1.08C14.4 2.54 13.16 1.66 11.73 1.66s-2.67.88-3.19 2.19c-1.39-.46-2.96-.02-3.88 1.08-1.1 1.1-1.54 2.67-1.08 4.06C2.22 9.51 1.34 10.75 1.34 12.18s.88 2.67 2.19 3.19c-.46 1.39-.02 2.96 1.08 3.88 1.1 1.1 2.67 1.54 4.06 1.08 1.04 1.31 2.28 2.19 3.71 2.19s2.67-.88 3.19-2.19c1.39.46 2.96.02 3.88-1.08 1.1-1.1 1.54-2.67 1.08-4.06 1.31-.52 2.19-1.76 2.19-3.19zm-11.71 4.2l-3.54-3.54 1.41-1.41 2.13 2.12 6.01-6.01 1.41 1.41-7.42 7.43z"/>
-                </svg>
-            </span>
-            {% endif %}
-        </div>
+    <!-- PROFILE HEADER CARD -->
+    <div class="card bg-dark text-white border-secondary mb-4 shadow">
+        <div class="card-body p-4 text-center">
+            
+            <!-- Profile Picture -->
+            <img src="{{ user.pfp_url or 'https://placehold.co/150/1e293b/22c55e?text=Steve' }}" 
+                 alt="Profile Picture" 
+                 class="rounded-circle img-thumbnail mb-3" 
+                 style="width: 130px; height: 130px; object-fit: cover;">
 
-        <!-- Name & Blue Badge -->
-        <div class="flex items-center justify-center gap-2 mb-1">
-            <h1 class="text-3xl font-extrabold text-slate-100">
+            <!-- Nickname & Badges -->
+            <h2 class="fw-bold mb-1">
                 {{ user.nickname or user.username }}
-            </h1>
-            {% if user.is_admin or user.is_verified %}
-            <svg class="w-6 h-6 text-[#1d9bf0] shrink-0" viewBox="0 0 24 24" fill="currentColor" title="Verified Crafter">
-                <path d="M22.25 12c0-1.43-.88-2.67-2.19-3.19.46-1.39.02-2.96-1.08-3.88-1.1-1.1-2.67-1.54-4.06-1.08C14.4 2.54 13.16 1.66 11.73 1.66s-2.67.88-3.19 2.19c-1.39-.46-2.96-.02-3.88 1.08-1.1 1.1-1.54 2.67-1.08 4.06C2.22 9.51 1.34 10.75 1.34 12.18s.88 2.67 2.19 3.19c-.46 1.39-.02 2.96 1.08 3.88 1.1 1.1 2.67 1.54 4.06 1.08 1.04 1.31 2.28 2.19 3.71 2.19s2.67-.88 3.19-2.19c1.39.46 2.96.02 3.88-1.08 1.1-1.1 1.54-2.67 1.08-4.06 1.31-.52 2.19-1.76 2.19-3.19zm-11.71 4.2l-3.54-3.54 1.41-1.41 2.13 2.12 6.01-6.01 1.41 1.41-7.42 7.43z"/>
-            </svg>
-            {% endif %}
-        </div>
-        
-        <p class="text-sm text-slate-400 mb-4">@{{ user.username }}</p>
+                {% if user.is_admin %}
+                    <span class="badge bg-danger fs-6 ms-1">⚡ Admin</span>
+                {% endif %}
+            </h2>
+            
+            <p class="text-muted mb-2">@{{ user.username }}</p>
 
-        <!-- Bio -->
-        {% if user.bio %}
-        <p class="text-slate-300 max-w-lg mx-auto text-sm italic mb-6">
-            "{{ user.bio }}"
-        </p>
-        {% endif %}
+            <!-- Bio -->
+            <p class="fst-italic text-light opacity-75 max-w-md mx-auto">
+                "{{ user.bio or 'Minecraft Myanmar Player ⛏️' }}"
+            </p>
 
-        <!-- Stats -->
-        <div class="flex justify-center items-center gap-8 border-t border-b border-slate-700/60 py-4 my-6">
-            <div>
-                <div class="text-xl font-bold text-emerald-400">{{ user.fake_followers or '0' }}</div>
-                <div class="text-xs text-slate-400 uppercase tracking-wider">Followers</div>
+            <!-- STATS ROW -->
+            <div class="row text-center my-4 py-3 bg-secondary bg-opacity-25 rounded-3 border border-secondary border-opacity-50">
+                <div class="col">
+                    <h4 class="fw-bold text-success mb-0">{{ followers_count }}</h4>
+                    <small class="text-muted text-uppercase fw-semibold">Followers</small>
+                </div>
+                <div class="col border-start border-end border-secondary">
+                    <h4 class="fw-bold text-danger mb-0">{{ profile_likes_count }}</h4>
+                    <small class="text-muted text-uppercase fw-semibold">Likes</small>
+                </div>
+                <div class="col">
+                    <h4 class="fw-bold text-warning mb-0">{{ user_posts|length }}</h4>
+                    <small class="text-muted text-uppercase fw-semibold">Posts</small>
+                </div>
             </div>
-            <div class="h-8 w-px bg-slate-700"></div>
-            <div>
-                <div class="text-xl font-bold text-emerald-400">{{ user.fake_likes or '0' }}</div>
-                <div class="text-xs text-slate-400 uppercase tracking-wider">Profile Likes</div>
-            </div>
-        </div>
 
-        <!-- Action Buttons -->
-        {% if current_user.is_authenticated and current_user.id == user.id %}
-        <a href="{{ url_for('edit_profile') }}" class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-6 py-2.5 rounded-xl transition shadow-lg">
-            <i class="fa-solid fa-pen-to-square"></i> Edit Profile
-        </a>
-        {% elif current_user.is_authenticated %}
-        <div class="flex justify-center gap-3">
-            <form action="{{ url_for('send_friend_request', user_id=user.id) }}" method="POST">
-                <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-5 py-2 rounded-xl text-sm transition shadow flex items-center gap-2">
-                    <i class="fa-solid fa-user-plus"></i> Add Friend
-                </button>
-            </form>
-            <a href="{{ url_for('dm', receiver_id=user.id) }}" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-5 py-2 rounded-xl text-sm font-bold transition flex items-center gap-2">
-                <i class="fa-solid fa-comment"></i> Chat
-            </a>
+            <!-- ACTION BUTTONS -->
+            <div class="d-flex justify-content-center gap-2 flex-wrap">
+                {% if current_user.id == user.id %}
+                    <!-- Edit Profile Trigger -->
+                    <button class="btn btn-outline-light btn-sm px-3" data-bs-toggle="modal" data-bs-target="#editProfileModal">
+                        ✏️ Edit Profile
+                    </button>
+                {% else %}
+                    <!-- Follow Button -->
+                    <form action="{{ url_for('follow_user', user_id=user.id) }}" method="POST" class="d-inline">
+                        <button type="submit" class="btn btn-sm {% if is_following %}btn-secondary{% else %}btn-success{% endif %}">
+                            {% if is_following %}👤 Unfollow{% else %}➕ Follow{% endif %}
+                        </button>
+                    </form>
+
+                    <!-- Give Profile Like Button -->
+                    <form action="{{ url_for('profile_like', user_id=user.id) }}" method="POST" class="d-inline">
+                        <button type="submit" class="btn btn-outline-danger btn-sm">
+                            {{ user.like_type_style or '❤️ Classic Red' }}
+                        </button>
+                    </form>
+
+                    <!-- Send Direct Message -->
+                    <a href="{{ url_for('dm', receiver_id=user.id) }}" class="btn btn-outline-info btn-sm">
+                        💬 Direct Message
+                    </a>
+
+                    <!-- Friend Request Status -->
+                    {% if friendship %}
+                        {% if friendship.status == 'accepted' %}
+                            <span class="badge bg-success align-self-center py-2 px-3">🤝 Friends</span>
+                        {% else %}
+                            <span class="badge bg-warning text-dark align-self-center py-2 px-3">⏳ Request Pending</span>
+                        {% endif %}
+                    {% else %}
+                        <form action="{{ url_for('send_friend_request', user_id=user.id) }}" method="POST" class="d-inline">
+                            <button type="submit" class="btn btn-primary btn-sm">🤝 Add Friend</button>
+                        </form>
+                    {% endif %}
+                {% endif %}
+            </div>
+
         </div>
-        {% endif %}
     </div>
 
-    <!-- ADMIN BOOST PANEL (Owner/Admin Only) -->
-    {% if current_user.is_authenticated and current_user.is_admin and current_user.id == user.id %}
-    <div class="bg-slate-800/80 border border-amber-500/40 rounded-2xl p-6 shadow-xl space-y-4">
-        <h2 class="text-lg font-bold text-amber-400 flex items-center gap-2">
-            <i class="fa-solid fa-wand-magic-sparkles"></i> Admin Boost (Set Fake Stats)
-        </h2>
-        <form action="{{ url_for('update_stats') }}" method="POST" class="space-y-4">
-            <div>
-                <label class="block text-xs font-medium text-slate-300 mb-1">Fake Followers String (e.g. 1.2M, 327k)</label>
-                <input type="text" name="fake_followers" value="{{ user.fake_followers or '' }}" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm text-slate-100 focus:outline-none focus:border-amber-400">
+    <!-- USER POSTS FEED -->
+    <h3 class="text-white mb-3">📌 Posts by {{ user.nickname or user.username }}</h3>
+    
+    {% if user_posts %}
+        {% for post in user_posts %}
+            <div class="card bg-dark text-white border-secondary mb-3 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title fw-bold text-success">{{ post.title }}</h5>
+                    <p class="card-text">{{ post.content }}</p>
+                    
+                    {% if post.image_url %}
+                        <img src="{{ post.image_url }}" alt="Post image" class="img-fluid rounded mb-3 max-h-60 object-fit-cover">
+                    {% endif %}
+
+                    {% if post.download_link %}
+                        <a href="{{ post.download_link }}" target="_blank" class="btn btn-success btn-sm mb-2">
+                            📥 Download File
+                        </a>
+                    {% endif %}
+
+                    <div class="text-muted small">
+                        Posted on {{ post.created_at.strftime('%b %d, %Y') if post.created_at else 'Recently' }}
+                    </div>
+                </div>
             </div>
-            <div>
-                <label class="block text-xs font-medium text-slate-300 mb-1">Fake Profile Likes String (e.g. 2.1M)</label>
-                <input type="text" name="fake_likes" value="{{ user.fake_likes or '' }}" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm text-slate-100 focus:outline-none focus:border-amber-400">
-            </div>
-            <button type="submit" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-5 py-2.5 rounded-xl text-sm transition shadow">
-                Save Boosted Stats
-            </button>
-        </form>
-    </div>
+        {% endfor %}
+    {% else %}
+        <div class="alert alert-secondary bg-dark text-light border-secondary text-center py-4">
+            No posts created yet! ⛏️
+        </div>
     {% endif %}
 
 </div>
+
+<!-- EDIT PROFILE MODAL -->
+{% if current_user.id == user.id %}
+<div class="modal fade" id="editProfileModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark text-white border-secondary">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title">Edit Your Profile</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url_for('edit_profile') }}" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label text-light">Display Nickname</label>
+                        <input type="text" name="nickname" class="form-control bg-secondary bg-opacity-25 text-white border-secondary" value="{{ user.nickname or '' }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-light">Profile Picture URL</label>
+                        <input type="url" name="pfp_url" class="form-control bg-secondary bg-opacity-25 text-white border-secondary" value="{{ user.pfp_url or '' }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-light">Bio</label>
+                        <textarea name="bio" class="form-control bg-secondary bg-opacity-25 text-white border-secondary" rows="3">{{ user.bio or '' }}</textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">Save Changes ✨</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
 {% endblock %}
