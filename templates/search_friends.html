@@ -1,89 +1,116 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container mt-4">
-    <h2 class="mb-3">🔍 Find Players & Make Friends</h2>
+<div class="max-w-6xl mx-auto space-y-8">
     
-    <!-- Search Bar Form -->
-    <form action="{{ url_for('search_friends') }}" method="GET" class="d-flex mb-4">
-        <input type="text" name="query" class="form-control me-2" placeholder="Search by username or nickname..." value="{{ query }}">
-        <button type="submit" class="btn btn-primary">Search</button>
-    </form>
+    <!-- SEARCH BAR SECTION -->
+    <div class="bg-gradient-to-r from-slate-800 via-slate-800 to-slate-900 border border-slate-700/80 rounded-2xl p-6 shadow-xl">
+        <h1 class="text-2xl font-bold text-emerald-400 mb-2 flex items-center gap-2">
+            <i class="fa-solid fa-compass"></i> Find & Discover Players
+        </h1>
+        <p class="text-xs text-slate-400 mb-4">Search by username or nickname to find your clan mates!</p>
+        
+        <form action="{{ url_for('search_friends') }}" method="GET" class="flex gap-3">
+            <input type="text" name="query" value="{{ query }}" placeholder="Search player name..." class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-slate-100 text-sm focus:outline-none focus:border-emerald-500 shadow-inner">
+            <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-6 py-3 rounded-xl transition shadow-lg flex items-center gap-2">
+                <i class="fa-solid fa-magnifying-glass"></i> Search
+            </button>
+        </form>
+    </div>
 
-    <!-- 🌟 MOST RECOMMENDED PLAYERS (TOP FOLLOWERS & ADMINS) 🌟 -->
-    <div class="card p-3 mb-4" style="background-color: #1e293b; border: 1px solid #3b82f6;">
-        <h4 class="text-warning mb-3">⭐ Recommended Players to Add</h4>
-        <div class="list-group">
+    <!-- RECOMMENDED / POPULAR & ADMIN PLAYERS -->
+    {% if not query and recommended %}
+    <div class="space-y-4">
+        <div class="flex items-center justify-between">
+            <h2 class="text-xl font-bold text-amber-400 flex items-center gap-2">
+                <i class="fa-solid fa-crown text-amber-400"></i> Popular & Featured Crafters
+            </h2>
+            <span class="text-xs text-slate-400">Top admins & active community legends</span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
             {% for user in recommended %}
-                <div class="list-group-item d-flex justify-content-between align-items-center" style="background-color: #0f172a;">
-                    <div class="d-flex align-items-center">
-                        <a href="{{ url_for('profile', username=user.username) }}">
-                            <img src="{{ user.pfp_url }}" alt="PFP" class="rounded-circle me-3" style="width: 50px; height: 50px; object-fit: cover; border: 2px solid #22c55e;">
-                        </a>
-                        <div>
-                            <a href="{{ url_for('profile', username=user.username) }}" class="text-decoration-none text-white">
-                                <strong>{{ user.nickname }}</strong> <small class="text-muted">(@{{ user.username }})</small>
+            <div class="bg-slate-800/90 border {% if user.is_admin %}border-amber-500/50 shadow-amber-950/30{% else %}border-slate-700/80{% endif %} rounded-2xl p-5 shadow-xl relative overflow-hidden flex flex-col justify-between group">
+                
+                {% if user.is_admin %}
+                <div class="absolute top-0 right-0 bg-gradient-to-l from-amber-500 to-amber-600 text-slate-950 text-[10px] font-black px-3 py-1 rounded-bl-xl shadow flex items-center gap-1">
+                    <i class="fa-solid fa-shield-halved"></i> ADMIN
+                </div>
+                {% endif %}
+
+                <div>
+                    <div class="flex items-center gap-3 mb-3">
+                        <img src="{{ user.safe_pfp }}" class="w-14 h-14 rounded-2xl object-cover border-2 {% if user.is_admin %}border-amber-400{% else %}border-emerald-500/50{% endif %} shadow">
+                        <div class="truncate">
+                            <a href="{{ url_for('profile', username=user.username) }}" class="font-bold text-slate-100 group-hover:text-emerald-400 transition text-base block truncate">
+                                {{ user.nickname }}
                             </a>
-                            
-                            <!-- 👑 ADMINISTRATOR TITLE BADGE -->
-                            {% if user.is_admin %}
-                                <div>
-                                    <span class="badge bg-danger mt-1">👑 Administrator</span>
-                                </div>
-                            {% else %}
-                                <div>
-                                    <small class="text-info">Popular Player 🔥</small>
-                                </div>
-                            {% endif %}
+                            <p class="text-xs text-slate-400 truncate">@{{ user.username }}</p>
+                            <span class="inline-block text-[11px] text-amber-300 font-medium mt-1">
+                                🔥 {{ user.fake_followers or '0' }} Followers
+                            </span>
                         </div>
                     </div>
-                    
-                    <div class="d-flex gap-2">
-                        <a href="{{ url_for('profile', username=user.username) }}" class="btn btn-sm btn-outline-primary">
-                            👁️ View
-                        </a>
-                        <form action="{{ url_for('send_friend_request', user_id=user.id) }}" method="POST">
-                            <button type="submit" class="btn btn-sm btn-success">+ Friend 🤝</button>
-                        </form>
-                    </div>
+
+                    <p class="text-xs text-slate-300 bg-slate-900/60 p-2.5 rounded-xl border border-slate-800 mb-4 italic line-clamp-2">
+                        "{{ user.bio }}"
+                    </p>
                 </div>
+
+                <div class="flex gap-2">
+                    <form action="{{ url_for('send_friend_request', user_id=user.id) }}" method="POST" class="flex-1">
+                        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-xl text-xs transition shadow flex items-center justify-center gap-1.5">
+                            <i class="fa-solid fa-user-plus"></i> Add Friend
+                        </button>
+                    </form>
+                    <a href="{{ url_for('dm', receiver_id=user.id) }}" class="bg-slate-700 hover:bg-slate-600 text-slate-200 p-2 rounded-xl text-xs transition flex items-center justify-center">
+                        <i class="fa-solid fa-comment"></i>
+                    </a>
+                </div>
+            </div>
             {% endfor %}
         </div>
     </div>
-
-    <!-- Search Results List (Only shows when searching) -->
-    {% if query %}
-        <h4>Search Results for "{{ query }}"</h4>
-        <ul class="list-group mt-3">
-            {% for user in results %}
-                <li class="list-group-item d-flex justify-content-between align-items-center">
-                    <div class="d-flex align-items-center">
-                        <a href="{{ url_for('profile', username=user.username) }}">
-                            <img src="{{ user.pfp_url }}" alt="PFP" class="rounded-circle me-3" style="width: 45px; height: 45px; object-fit: cover;">
-                        </a>
-                        <div>
-                            <a href="{{ url_for('profile', username=user.username) }}" class="text-decoration-none text-white">
-                                <strong>{{ user.nickname }}</strong> <small class="text-muted">(@{{ user.username }})</small>
-                            </a>
-                            {% if user.is_admin %}
-                                <div><span class="badge bg-danger">👑 Administrator</span></div>
-                            {% endif %}
-                        </div>
-                    </div>
-                    
-                    <div class="d-flex gap-2">
-                        <a href="{{ url_for('profile', username=user.username) }}" class="btn btn-sm btn-outline-primary">
-                            👁️ View Profile
-                        </a>
-                        <form action="{{ url_for('send_friend_request', user_id=user.id) }}" method="POST">
-                            <button type="submit" class="btn btn-sm btn-success">+ Friend 🤝</button>
-                        </form>
-                    </div>
-                </li>
-            {% else %}
-                <li class="list-group-item text-muted">No players found matching "{{ query }}" 😢</li>
-            {% endfor %}
-        </ul>
     {% endif %}
+
+    <!-- SEARCH RESULTS -->
+    {% if query %}
+    <div class="space-y-4">
+        <h2 class="text-lg font-bold text-slate-200">Search Results for "{{ query }}"</h2>
+        {% if results %}
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
+            {% for user in results %}
+            <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-5 shadow-lg flex flex-col justify-between">
+                <div class="flex items-center gap-3 mb-3">
+                    <img src="{{ user.safe_pfp }}" class="w-12 h-12 rounded-2xl object-cover border-2 border-emerald-500/40">
+                    <div class="truncate">
+                        <a href="{{ url_for('profile', username=user.username) }}" class="font-bold text-slate-100 hover:text-emerald-400 transition text-sm block truncate">
+                            {{ user.nickname }}
+                        </a>
+                        <p class="text-xs text-slate-400 truncate">@{{ user.username }}</p>
+                    </div>
+                </div>
+
+                <div class="flex gap-2 mt-2">
+                    <form action="{{ url_for('send_friend_request', user_id=user.id) }}" method="POST" class="flex-1">
+                        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-xl text-xs transition shadow">
+                            + Add Friend
+                        </button>
+                    </form>
+                    <a href="{{ url_for('dm', receiver_id=user.id) }}" class="bg-slate-700 hover:bg-slate-600 text-slate-200 p-2 rounded-xl text-xs transition">
+                        <i class="fa-solid fa-comment"></i>
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="bg-slate-800/50 border border-slate-700/60 rounded-2xl p-8 text-center text-slate-400">
+            <p>No players found matching "{{ query }}".</p>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
 </div>
 {% endblock %}
