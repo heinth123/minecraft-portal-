@@ -4,14 +4,14 @@
 <div class="max-w-4xl mx-auto">
     <div class="bg-slate-800 border border-slate-700/80 rounded-2xl shadow-2xl flex flex-col h-[75vh]">
         
-        <!-- DM HEADER WITH VERIFIED SVG BADGE -->
+        <!-- DM HEADER -->
         <div class="p-4 border-b border-slate-700/80 flex items-center justify-between bg-slate-800/50 rounded-t-2xl">
             <div class="flex items-center gap-3">
                 <a href="{{ url_for('chat') }}" class="bg-slate-700/60 hover:bg-slate-700 text-slate-300 p-2 rounded-xl transition flex items-center justify-center">
                     <i class="fa-solid fa-arrow-left"></i>
                 </a>
                 
-                <div class="relative">
+                <div class="relative flex-shrink-0">
                     <img src="{{ receiver.safe_pfp }}" class="w-10 h-10 rounded-xl object-cover border border-emerald-500/50">
                     {% if receiver.is_admin or receiver.is_verified %}
                     <span class="absolute -bottom-1 -right-1 bg-slate-900 rounded-full p-0.5 shadow">
@@ -28,7 +28,7 @@
                             {{ receiver.nickname or receiver.username }}
                         </a>
                         {% if receiver.is_admin or receiver.is_verified %}
-                        <svg class="w-4.5 h-4.5 text-[#1d9bf0] shrink-0" viewBox="0 0 24 24" fill="currentColor" title="Verified Crafter">
+                        <svg class="w-5 h-5 text-[#1d9bf0] shrink-0 inline-block" viewBox="0 0 24 24" fill="currentColor" title="Verified Crafter">
                             <path d="M22.25 12c0-1.43-.88-2.67-2.19-3.19.46-1.39.02-2.96-1.08-3.88-1.1-1.1-2.67-1.54-4.06-1.08C14.4 2.54 13.16 1.66 11.73 1.66s-2.67.88-3.19 2.19c-1.39-.46-2.96-.02-3.88 1.08-1.1 1.1-1.54 2.67-1.08 4.06C2.22 9.51 1.34 10.75 1.34 12.18s.88 2.67 2.19 3.19c-.46 1.39-.02 2.96 1.08 3.88 1.1 1.1 2.67 1.54 4.06 1.08 1.04 1.31 2.28 2.19 3.71 2.19s2.67-.88 3.19-2.19c1.39.46 2.96.02 3.88-1.08 1.1-1.1 1.54-2.67 1.08-4.06 1.31-.52 2.19-1.76 2.19-3.19zm-11.71 4.2l-3.54-3.54 1.41-1.41 2.13 2.12 6.01-6.01 1.41 1.41-7.42 7.43z"/>
                         </svg>
                         {% endif %}
@@ -54,7 +54,7 @@
             {% endfor %}
         </div>
 
-        <!-- INPUT FORM (FIXED ROUTE HERE) -->
+        <!-- INPUT FORM -->
         <form action="{{ url_for('dm', receiver_id=receiver.id) }}" method="POST" class="p-3 bg-slate-900/60 border-t border-slate-700/80 flex gap-2 rounded-b-2xl">
             <input type="text" name="content" placeholder="Write a message..." required class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-slate-100 text-sm focus:outline-none focus:border-emerald-500 shadow-inner">
             <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-5 py-2.5 rounded-xl transition shadow flex items-center gap-1.5 text-sm">
@@ -66,7 +66,6 @@
 </div>
 
 <script>
-    // Auto scroll chat to the bottom on load
     const messagesBox = document.getElementById('messagesBox');
     if (messagesBox) {
         messagesBox.scrollTop = messagesBox.scrollHeight;
