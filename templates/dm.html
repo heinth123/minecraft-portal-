@@ -1,77 +1,75 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat with {{ receiver.nickname }} | Minecraft Myanmar</title>
-    <style>
-        :root { --bg-dark: #0f172a; --card-bg: #1e293b; --green: #22c55e; --text-main: #f8fafc; --text-muted: #94a3b8; }
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, sans-serif; }
-        body { background-color: var(--bg-dark); color: var(--text-main); min-height: 100vh; display: flex; flex-direction: column; }
-        nav { display: flex; justify-content: space-between; align-items: center; padding: 1rem 2rem; background: #1e293b; border-bottom: 1px solid #334155; }
-        .nav-links { display: flex; gap: 15px; }
-        .nav-links a { color: var(--text-main); text-decoration: none; font-weight: bold; }
-        
-        .chat-container { max-width: 700px; width: 100%; margin: 1.5rem auto; background: var(--card-bg); border-radius: 12px; border: 1px solid #334155; display: flex; flex-direction: column; height: 75vh; }
-        .chat-header { padding: 1rem; border-bottom: 1px solid #334155; display: flex; align-items: center; gap: 12px; background: #0f172a; border-radius: 12px 12px 0 0; }
-        .pfp { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
-        .badge-verified { color: #38bdf8; }
-        
-        .messages-box { flex-grow: 1; padding: 1rem; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
-        .msg { max-width: 70%; padding: 0.8rem 1rem; border-radius: 12px; font-size: 0.95rem; word-break: break-word; }
-        .msg-sent { background: var(--green); color: black; align-self: flex-end; border-bottom-right-radius: 2px; font-weight: 500; }
-        .msg-received { background: #334155; color: white; align-self: flex-start; border-bottom-left-radius: 2px; }
-        
-        .chat-input-form { padding: 1rem; border-top: 1px solid #334155; display: flex; gap: 10px; background: #0f172a; border-radius: 0 0 12px 12px; }
-        input { flex-grow: 1; padding: 0.8rem; background: #1e293b; border: 1px solid #334155; color: white; border-radius: 8px; font-size: 0.95rem; }
-        button { padding: 0.8rem 1.5rem; background: var(--green); color: black; border: none; font-weight: bold; border-radius: 8px; cursor: pointer; }
-    </style>
-</head>
-<body>
+{% extends "base.html" %}
 
-    <nav>
-        <span style="font-weight: bold; color: var(--green);">⛏️ Minecraft Myanmar</span>
-        <div class="nav-links">
-            <a href="/">🏠 Home</a>
-            <a href="/community">🌐 Community</a>
-            <a href="/chat" style="color: var(--green);">💬 Chat</a>
-            <a href="/profile/{{ current_user.username }}">👤 Profile</a>
-        </div>
-    </nav>
-
-    <div class="chat-container">
-        <!-- Chat Header -->
-        <div class="chat-header">
-            <a href="/chat" style="color: var(--text-muted); text-decoration: none; font-size: 1.2rem; margin-right: 5px;">⬅️</a>
-            <img src="{{ receiver.pfp_url }}" class="pfp">
-            <div>
-                <div style="font-weight: bold; font-size: 1.05rem;">
-                    {{ receiver.nickname }}
-                    {% if receiver.is_admin %}<span class="badge-verified">✔</span>{% endif %}
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="bg-slate-800 border border-slate-700/80 rounded-2xl shadow-2xl flex flex-col h-[75vh]">
+        
+        <!-- DM HEADER WITH VERIFIED SVG BADGE -->
+        <div class="p-4 border-b border-slate-700/80 flex items-center justify-between bg-slate-800/50 rounded-t-2xl">
+            <div class="flex items-center gap-3">
+                <a href="{{ url_for('chat') }}" class="bg-slate-700/60 hover:bg-slate-700 text-slate-300 p-2 rounded-xl transition flex items-center justify-center">
+                    <i class="fa-solid fa-arrow-left"></i>
+                </a>
+                
+                <div class="relative">
+                    <img src="{{ receiver.safe_pfp }}" class="w-10 h-10 rounded-xl object-cover border border-emerald-500/50">
+                    {% if receiver.is_admin or receiver.is_verified %}
+                    <span class="absolute -bottom-1 -right-1 bg-slate-900 rounded-full p-0.5 shadow">
+                        <svg class="w-3.5 h-3.5 text-[#1d9bf0]" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M22.25 12c0-1.43-.88-2.67-2.19-3.19.46-1.39.02-2.96-1.08-3.88-1.1-1.1-2.67-1.54-4.06-1.08C14.4 2.54 13.16 1.66 11.73 1.66s-2.67.88-3.19 2.19c-1.39-.46-2.96-.02-3.88 1.08-1.1 1.1-1.54 2.67-1.08 4.06C2.22 9.51 1.34 10.75 1.34 12.18s.88 2.67 2.19 3.19c-.46 1.39-.02 2.96 1.08 3.88 1.1 1.1 2.67 1.54 4.06 1.08 1.04 1.31 2.28 2.19 3.71 2.19s2.67-.88 3.19-2.19c1.39.46 2.96.02 3.88-1.08 1.1-1.1 1.54-2.67 1.08-4.06 1.31-.52 2.19-1.76 2.19-3.19zm-11.71 4.2l-3.54-3.54 1.41-1.41 2.13 2.12 6.01-6.01 1.41 1.41-7.42 7.43z"/>
+                        </svg>
+                    </span>
+                    {% endif %}
                 </div>
-                <div style="font-size: 0.75rem; color: var(--text-muted);">@{{ receiver.username }}</div>
+
+                <div>
+                    <div class="flex items-center gap-1.5">
+                        <a href="{{ url_for('profile', username=receiver.username) }}" class="font-bold text-slate-100 hover:text-emerald-400 transition text-base">
+                            {{ receiver.nickname or receiver.username }}
+                        </a>
+                        {% if receiver.is_admin or receiver.is_verified %}
+                        <svg class="w-4.5 h-4.5 text-[#1d9bf0] shrink-0" viewBox="0 0 24 24" fill="currentColor" title="Verified Crafter">
+                            <path d="M22.25 12c0-1.43-.88-2.67-2.19-3.19.46-1.39.02-2.96-1.08-3.88-1.1-1.1-2.67-1.54-4.06-1.08C14.4 2.54 13.16 1.66 11.73 1.66s-2.67.88-3.19 2.19c-1.39-.46-2.96-.02-3.88 1.08-1.1 1.1-1.54 2.67-1.08 4.06C2.22 9.51 1.34 10.75 1.34 12.18s.88 2.67 2.19 3.19c-.46 1.39-.02 2.96 1.08 3.88 1.1 1.1 2.67 1.54 4.06 1.08 1.04 1.31 2.28 2.19 3.71 2.19s2.67-.88 3.19-2.19c1.39.46 2.96.02 3.88-1.08 1.1-1.1 1.54-2.67 1.08-4.06 1.31-.52 2.19-1.76 2.19-3.19zm-11.71 4.2l-3.54-3.54 1.41-1.41 2.13 2.12 6.01-6.01 1.41 1.41-7.42 7.43z"/>
+                        </svg>
+                        {% endif %}
+                    </div>
+                    <p class="text-xs text-slate-400">@{{ receiver.username }}</p>
+                </div>
             </div>
         </div>
 
-        <!-- Messages Area -->
-        <div class="messages-box">
-            {% if not messages %}
-                <p style="text-align: center; color: var(--text-muted); margin-auto: 0;">No messages yet. Say hi! 👋</p>
-            {% endif %}
-
+        <!-- MESSAGES AREA -->
+        <div class="flex-1 p-4 overflow-y-auto space-y-3" id="messagesBox">
             {% for msg in messages %}
-                <div class="msg {% if msg.sender_id == current_user.id %}msg-sent{% else %}msg-received{% endif %}">
-                    {{ msg.content }}
+                <div class="flex flex-col {% if msg.sender_id == current_user.id %}items-end{% else %}items-start{% endif %}">
+                    <div class="max-w-[75%] px-4 py-2.5 rounded-2xl text-sm font-medium shadow-md {% if msg.sender_id == current_user.id %}bg-emerald-600 text-white rounded-br-none{% else %}bg-slate-700 text-slate-100 rounded-bl-none{% endif %}">
+                        {{ msg.content }}
+                    </div>
+                </div>
+            {% else %}
+                <div class="text-center text-slate-500 my-auto py-10">
+                    <i class="fa-solid fa-comments text-3xl mb-2 text-slate-600"></i>
+                    <p class="text-sm">No messages yet. Say hi!</p>
                 </div>
             {% endfor %}
         </div>
 
-        <!-- Send Message Form -->
-        <form class="chat-input-form" method="POST">
-            <input type="text" name="content" placeholder="Write a message..." required autocomplete="off">
-            <button type="submit">Send 🚀</button>
+        <!-- INPUT FORM -->
+        <form action="{{ url_for('send_dm', receiver_id=receiver.id) }}" method="POST" class="p-3 bg-slate-900/60 border-t border-slate-700/80 flex gap-2 rounded-b-2xl">
+            <input type="text" name="content" placeholder="Write a message..." required class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-slate-100 text-sm focus:outline-none focus:border-emerald-500 shadow-inner">
+            <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-5 py-2.5 rounded-xl transition shadow flex items-center gap-1.5 text-sm">
+                Send 🚀
+            </button>
         </form>
-    </div>
 
-</body>
-</html>
+    </div>
+</div>
+
+<script>
+    // Auto scroll chat to the bottom on load
+    const messagesBox = document.getElementById('messagesBox');
+    if (messagesBox) {
+        messagesBox.scrollTop = messagesBox.scrollHeight;
+    }
+</script>
+{% endblock %}
