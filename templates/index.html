@@ -3,10 +3,55 @@
 {% block content %}
 <div class="max-w-4xl mx-auto space-y-8">
 
+    <!-- CREATE POST CARD (ADMIN & USER) -->
+    {% if current_user.is_authenticated %}
+    <div class="bg-slate-800 border border-slate-700/80 rounded-2xl p-6 shadow-xl space-y-4">
+        <h2 class="text-xl font-bold text-emerald-400 flex items-center gap-2">
+            <i class="fa-solid fa-pen-to-square"></i> Create a Post
+        </h2>
+
+        <form action="{{ url_for('create_post') }}" method="POST" class="space-y-4">
+            <!-- Feed Type: Set to 'official' if Admin so it appears on home feed -->
+            {% if current_user.is_admin %}
+                <input type="hidden" name="feed_type" value="official">
+            {% else %}
+                <input type="hidden" name="feed_type" value="community">
+            {% endif %}
+
+            <!-- Title Input -->
+            <div>
+                <input type="text" name="title" placeholder="Post Title" required
+                       class="w-full bg-slate-900/80 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition">
+            </div>
+
+            <!-- Content Area -->
+            <div>
+                <textarea name="content" rows="3" placeholder="What's on your mind? Share news, maps, or addons..." required
+                          class="w-full bg-slate-900/80 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition resize-none"></textarea>
+            </div>
+
+            <!-- Optional Image & Download Links -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <input type="url" name="image_url" placeholder="Image URL (Optional)"
+                       class="w-full bg-slate-900/80 border border-slate-700 rounded-xl px-4 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition">
+                <input type="url" name="download_link" placeholder="Addon/Map Download Link (Optional)"
+                       class="w-full bg-slate-900/80 border border-slate-700 rounded-xl px-4 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition">
+            </div>
+
+            <!-- Submit Button -->
+            <div class="flex justify-end">
+                <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-6 py-2 rounded-xl text-xs flex items-center gap-2 shadow-lg transition">
+                    <i class="fa-solid fa-paper-plane"></i> Publish Post
+                </button>
+            </div>
+        </form>
+    </div>
+    {% endif %}
+
     <!-- FEED POSTS -->
     <div class="space-y-6">
         <h2 class="text-xl font-bold text-emerald-400 flex items-center gap-2">
-            <i class="fa-solid fa-bullhorn"></i> Community Posts & Addons
+            <i class="fa-solid fa-bullhorn"></i> {{ feed_title if feed_title else "Community Posts & Addons" }}
         </h2>
 
         {% if posts %}
