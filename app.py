@@ -101,6 +101,17 @@ class DirectMessage(db.Model):
     sender = db.relationship('User', foreign_keys=[sender_id])
     receiver = db.relationship('User', foreign_keys=[receiver_id])
 
+class Mail(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    receiver_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    subject = db.Column(db.String(100), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    sender = db.relationship('User', foreign_keys=[sender_id], backref='sent_mails')
+    receiver = db.relationship('User', foreign_keys=[receiver_id], backref='received_mails')
+
 class GroupChat(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
@@ -125,7 +136,6 @@ def init_database():
     with app.app_context():
         db.create_all()
         
-        # Safe schema checks without breaking PostgreSQL connection pools
         try:
             from sqlalchemy import inspect, text
             inspector = inspect(db.engine)
@@ -141,7 +151,6 @@ def init_database():
         except Exception as e:
             app.logger.warning(f"Schema check notice: {e}")
 
-        # Admin User Initialization
         admins = [
             ("heinth123", "Ssu@$1588hhs0=@@!!hsjk"),
             ("rivercraft_official", "argta6799+//@#$%sd@#4gysdf5"),
@@ -158,23 +167,83 @@ def init_database():
 
         db.session.commit()
 
-# Run DB Initialization safely
 init_database()
 
 # ----------------- ROUTES -----------------
-@app.route('/mailbox')
+
+@app.route('/mailbox', methods=['GET', 'POST'])
 @login_required
 def mailbox():
-    # Fetch direct messages received by the user
-    received_dms = DirectMessage.query.filter_by(receiver_id=current_user.id)\
-        .order_by(DirectMessage.created_at.desc()).all()
+    if request.method == 'POST':
+        receiver_id = request.form.get('receiver_id')
+        subject = request.form.get('subject')
+        content = request.form.get('content')
+        
+        if receiver_id and subject and content:
+            new_mail = Mail(
+                sender_id=current_user.id,
+                receiver_id=int(receiver_id),
+                subject=subject,
+                content=content
+            )
+            db.session.add(new_mail)
+            db.session.commit()
+            flash('Mail sent successfully! ✉️', 'success')
+            return redirect(url_for('mailbox'))
+        else:
+            flash('Please fill out all fields to send mail!', 'danger')
+
+    received_mails = Mail.query.filter_by(receiver_id=current_user.id)\
+        .order_by(Mail.created_at.desc()).all()
     
-    # Fetch pending friend requests
-    pending_friends = Friendship.query.filter_by(receiver_id=current_user.id, status='pending')\
-        .order_by(Friendship.created_at.desc()).all()
+    sent_mails = Mail.query.filter_by(sender_id=current_user.id)\
+        .order_by(Mail.created_at.desc()).all()
+
+    all_other_users = User.query.filter(User.id != current_user.id).all()
     
-    return render_template('mailbox.html', dms=received_dms, friend_requests=pending_friends)
+    return render_template('mailbox.html', 
+                           received_mails=received_mails, 
+                           sent_mails=sent_mails, 
+                           all_users=all_other_users)
+
+@app.route('/chat')
+@login_required
+def chat():
+    all_users = User.query.filter(User.id != current_user.id).all()
     
+    all_dms = DirectMessage.query.filter(
+        (DirectMessage.sender_id == current_user.id) | (DirectMessage.receiver_id == current_user.id)
+    ).order_by(DirectMessage.created_at.desc()).all()
+
+    chat_partner_ids = []
+    for msg in all_dms:
+        partner_id = msg.receiver_id if msg.sender_id == current_user.id else msg.sender_id
+        if partner_id not in chat_partner_ids:
+            chat_partner_ids.append(partner_id)
+
+    recent_chats = User.query.filter(User.id.in_(chat_partner_ids)).all() if chat_partner_ids else []
+
+    return render_template('chat.html', recent_chats=recent_chats, all_users=all_users)
+
+@app.route('/chat/dm/<int:receiver_id>', methods=['GET', 'POST'])
+@login_required
+def dm(receiver_id):
+    receiver = User.query.get_or_404(receiver_id)
+    
+    if request.method == 'POST':
+        content = request.form.get('content')
+        if content:
+            msg = DirectMessage(sender_id=current_user.id, receiver_id=receiver_id, content=content)
+            db.session.add(msg)
+            db.session.commit()
+            
+    messages = DirectMessage.query.filter(
+        ((DirectMessage.sender_id == current_user.id) & (DirectMessage.receiver_id == receiver_id)) |
+        ((DirectMessage.sender_id == receiver_id) & (DirectMessage.receiver_id == current_user.id))
+    ).order_by(DirectMessage.created_at.asc()).all()
+    
+    return render_template('dm.html', receiver=receiver, messages=messages)
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
@@ -454,7 +523,6 @@ def admin_panel():
     all_posts = Post.query.order_by(Post.id.desc()).all()
     return render_template('admin.html', users=all_users, posts=all_posts)
 
-# --- MISSING ROUTE FIX: Prevents Jinja2 url_for('admin_gui_update') BuildError ---
 @app.route('/admin/gui-update', methods=['POST'])
 @login_required
 def admin_gui_update():
@@ -463,8 +531,6 @@ def admin_gui_update():
         return redirect(url_for('home'))
 
     setting_name = request.form.get('setting_name')
-    setting_value = request.form.get('setting_value')
-
     flash(f"Updated GUI setting {setting_name}! ✨", "success")
     return redirect(request.referrer or url_for('admin_panel'))
 
@@ -494,43 +560,6 @@ def fake_post_likes(post_id):
     
     flash('Post fake likes applied! 🪄', 'success')
     return redirect(request.referrer or url_for('admin_panel'))
-
-@app.route('/chat')
-@login_required
-def chat():
-    all_dms = DirectMessage.query.filter(
-        (DirectMessage.sender_id == current_user.id) | (DirectMessage.receiver_id == current_user.id)
-    ).order_by(DirectMessage.created_at.desc()).all()
-
-    chat_partner_ids = []
-    for msg in all_dms:
-        partner_id = msg.receiver_id if msg.sender_id == current_user.id else msg.sender_id
-        if partner_id not in chat_partner_ids:
-            chat_partner_ids.append(partner_id)
-
-    recent_chats = User.query.filter(User.id.in_(chat_partner_ids)).all() if chat_partner_ids else []
-    all_users = User.query.filter(User.id != current_user.id).all()
-
-    return render_template('chat.html', recent_chats=recent_chats, all_users=all_users)
-
-@app.route('/chat/dm/<int:receiver_id>', methods=['GET', 'POST'])
-@login_required
-def dm(receiver_id):
-    receiver = User.query.get_or_404(receiver_id)
-    
-    if request.method == 'POST':
-        content = request.form.get('content')
-        if content:
-            msg = DirectMessage(sender_id=current_user.id, receiver_id=receiver_id, content=content)
-            db.session.add(msg)
-            db.session.commit()
-            
-    messages = DirectMessage.query.filter(
-        ((DirectMessage.sender_id == current_user.id) & (DirectMessage.receiver_id == receiver_id)) |
-        ((DirectMessage.sender_id == receiver_id) & (DirectMessage.receiver_id == current_user.id))
-    ).order_by(DirectMessage.created_at.asc()).all()
-    
-    return render_template('dm.html', receiver=receiver, messages=messages)
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
