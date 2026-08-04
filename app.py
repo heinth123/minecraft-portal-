@@ -540,21 +540,55 @@ def profile(username=None):
         flash(f"User '{decoded_username}' not found!", "danger")
         return redirect(url_for('home'))
 
-    real_followers = Follow.query.filter_by(followed_id=user.id).count()
-    real_profile_likes = ProfileLike.query.filter_by(receiver_id=user.id).count()
-    is_following = Follow.query.filter_by(follower_id=current_user.id, followed_id=user.id).first() is not None
-    user_posts = Post.query.filter_by(user_id=user.id).order_by(Post.id.desc()).all()
-    
-    friendship = Friendship.query.filter(
-        ((Friendship.sender_id == current_user.id) & (Friendship.receiver_id == user.id)) |
-        ((Friendship.sender_id == user.id) & (Friendship.receiver_id == current_user.id))
-    ).first()
-    
+    # Calculate followers safely
+    try:
+        real_followers = Follow.query.filter_by(followed_id=user.id).count()
+        if user.fake_followers and str(user.fake_followers).strip() not in ['', '0', 'None']:
+            followers_count = user.fake_followers
+        else:
+            followers_count = real_followers
+    except Exception as e:
+        app.logger.error(f"Followers check error: {e}")
+        followers_count = 0
+
+    # Calculate likes safely
+    try:
+        real_profile_likes = ProfileLike.query.filter_by(receiver_id=user.id).count()
+        if user.fake_likes and str(user.fake_likes).strip() not in ['', '0', 'None']:
+            profile_likes_count = user.fake_likes
+        else:
+            profile_likes_count = real_profile_likes
+    except Exception as e:
+        app.logger.error(f"Likes check error: {e}")
+        profile_likes_count = 0
+
+    # Safe checks for following, posts, friendship
+    is_following = False
+    try:
+        is_following = Follow.query.filter_by(follower_id=current_user.id, followed_id=user.id).first() is not None
+    except Exception as e:
+        app.logger.error(f"Is following check error: {e}")
+
+    user_posts = []
+    try:
+        user_posts = Post.query.filter_by(user_id=user.id).order_by(Post.id.desc()).all()
+    except Exception as e:
+        app.logger.error(f"User posts query error: {e}")
+
+    friendship = None
+    try:
+        friendship = Friendship.query.filter(
+            ((Friendship.sender_id == current_user.id) & (Friendship.receiver_id == user.id)) |
+            ((Friendship.sender_id == user.id) & (Friendship.receiver_id == current_user.id))
+        ).first()
+    except Exception as e:
+        app.logger.error(f"Friendship query error: {e}")
+
     return render_template(
         'profile.html',
         user=user,
-        followers_count=user.fake_followers or real_followers,
-        profile_likes_count=user.fake_likes or real_profile_likes,
+        followers_count=followers_count,
+        profile_likes_count=profile_likes_count,
         is_following=is_following,
         user_posts=user_posts,
         friendship=friendship
