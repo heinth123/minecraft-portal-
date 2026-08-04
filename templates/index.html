@@ -3,55 +3,10 @@
 {% block content %}
 <div class="max-w-4xl mx-auto space-y-8">
 
-    <!-- CREATE POST BOX -->
-    <div class="bg-slate-800 border border-slate-700/80 rounded-2xl p-6 shadow-2xl space-y-4">
-        <div class="flex items-center gap-3 border-b border-slate-700/60 pb-3">
-            <img src="{{ current_user.safe_pfp }}" class="w-10 h-10 rounded-full object-cover border border-emerald-500/50">
-            <div>
-                <h2 class="font-bold text-slate-100 text-sm">Create a Community Post</h2>
-                <p class="text-xs text-slate-400">Share your Minecraft addons, builds, or server news!</p>
-            </div>
-        </div>
-
-        <form action="{{ url_for('create_post') }}" method="POST" class="space-y-4">
-            <div>
-                <input type="text" name="title" placeholder="Post Title (e.g. My Custom Addon v1.0)..." required class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-slate-100 text-sm focus:outline-none focus:border-emerald-500">
-            </div>
-
-            <div>
-                <textarea name="content" rows="3" placeholder="Write what your post is about..." required class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-slate-100 text-sm focus:outline-none focus:border-emerald-500"></textarea>
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                    <label class="block text-[11px] font-bold text-slate-400 uppercase mb-1">Image URL (Optional)</label>
-                    <input type="url" name="image_url" placeholder="https://imgur.com/image.png" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-slate-100 text-xs focus:outline-none focus:border-emerald-500">
-                </div>
-                <div>
-                    <label class="block text-[11px] font-bold text-slate-400 uppercase mb-1">Download Link (Optional)</label>
-                    <input type="url" name="download_link" placeholder="https://mediafire.com/file..." class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-slate-100 text-xs focus:outline-none focus:border-emerald-500">
-                </div>
-            </div>
-
-            {% if current_user.is_admin %}
-            <div class="flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 p-2.5 rounded-xl">
-                <input type="checkbox" name="feed_type" value="official" id="official_check" class="rounded text-amber-500 focus:ring-0">
-                <label for="official_check" class="text-xs font-semibold text-amber-400">Publish as Official Announcement ★</label>
-            </div>
-            {% endif %}
-
-            <div class="flex justify-end">
-                <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-6 py-2.5 rounded-xl transition shadow-lg flex items-center gap-2 text-sm">
-                    <i class="fa-solid fa-paper-plane"></i> Publish Post
-                </button>
-            </div>
-        </form>
-    </div>
-
     <!-- FEED POSTS -->
     <div class="space-y-6">
         <h2 class="text-xl font-bold text-emerald-400 flex items-center gap-2">
-            <i class="fa-solid fa-bullhorn"></i> {{ feed_title or "Announcements & Addons" }}
+            <i class="fa-solid fa-bullhorn"></i> Community Posts & Addons
         </h2>
 
         {% if posts %}
@@ -60,11 +15,27 @@
                 <!-- Post Author Header -->
                 <div class="flex items-center justify-between border-b border-slate-700/60 pb-3">
                     <div class="flex items-center gap-3">
-                        <img src="{{ post.user.safe_pfp }}" class="w-11 h-11 rounded-2xl object-cover border-2 border-emerald-500/40">
+                        <div class="relative">
+                            <img src="{{ post.user.safe_pfp }}" class="w-11 h-11 rounded-2xl object-cover border-2 border-emerald-500/40">
+                            {% if post.user.is_admin or post.user.is_verified %}
+                            <span class="absolute -bottom-1 -right-1 bg-slate-900 rounded-full p-0.5 shadow">
+                                <svg class="w-3.5 h-3.5 text-[#1d9bf0]" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M22.25 12c0-1.43-.88-2.67-2.19-3.19.46-1.39.02-2.96-1.08-3.88-1.1-1.1-2.67-1.54-4.06-1.08C14.4 2.54 13.16 1.66 11.73 1.66s-2.67.88-3.19 2.19c-1.39-.46-2.96-.02-3.88 1.08-1.1 1.1-1.54 2.67-1.08 4.06C2.22 9.51 1.34 10.75 1.34 12.18s.88 2.67 2.19 3.19c-.46 1.39-.02 2.96 1.08 3.88 1.1 1.1 2.67 1.54 4.06 1.08 1.04 1.31 2.28 2.19 3.71 2.19s2.67-.88 3.19-2.19c1.39.46 2.96.02 3.88-1.08 1.1-1.1 1.54-2.67 1.08-4.06 1.31-.52 2.19-1.76 2.19-3.19zm-11.71 4.2l-3.54-3.54 1.41-1.41 2.13 2.12 6.01-6.01 1.41 1.41-7.42 7.43z"/>
+                                </svg>
+                            </span>
+                            {% endif %}
+                        </div>
                         <div>
-                            <a href="{{ url_for('profile', username=post.user.username) }}" class="font-bold text-slate-100 hover:text-emerald-400 transition text-sm">
-                                {{ post.user.nickname }}
-                            </a>
+                            <div class="flex items-center gap-1">
+                                <a href="{{ url_for('profile', username=post.user.username) }}" class="font-bold text-slate-100 hover:text-emerald-400 transition text-sm">
+                                    {{ post.user.nickname }}
+                                </a>
+                                {% if post.user.is_admin or post.user.is_verified %}
+                                <svg class="w-4 h-4 text-[#1d9bf0] shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M22.25 12c0-1.43-.88-2.67-2.19-3.19.46-1.39.02-2.96-1.08-3.88-1.1-1.1-2.67-1.54-4.06-1.08C14.4 2.54 13.16 1.66 11.73 1.66s-2.67.88-3.19 2.19c-1.39-.46-2.96-.02-3.88 1.08-1.1 1.1-1.54 2.67-1.08 4.06C2.22 9.51 1.34 10.75 1.34 12.18s.88 2.67 2.19 3.19c-.46 1.39-.02 2.96 1.08 3.88 1.1 1.1 2.67 1.54 4.06 1.08 1.04 1.31 2.28 2.19 3.71 2.19s2.67-.88 3.19-2.19c1.39.46 2.96.02 3.88-1.08 1.1-1.1 1.54-2.67 1.08-4.06 1.31-.52 2.19-1.76 2.19-3.19zm-11.71 4.2l-3.54-3.54 1.41-1.41 2.13 2.12 6.01-6.01 1.41 1.41-7.42 7.43z"/>
+                                </svg>
+                                {% endif %}
+                            </div>
                             <p class="text-xs text-slate-400">@{{ post.user.username }}</p>
                         </div>
                     </div>
@@ -77,29 +48,17 @@
                     <p class="text-slate-300 text-sm leading-relaxed whitespace-pre-line">{{ post.content }}</p>
                 </div>
 
-                <!-- Post Image -->
                 {% if post.image_url %}
                 <div class="rounded-xl overflow-hidden border border-slate-700 max-h-96">
                     <img src="{{ post.image_url }}" class="w-full object-cover">
                 </div>
                 {% endif %}
 
-                <!-- Download Link -->
                 {% if post.download_link %}
                 <a href="{{ post.download_link }}" target="_blank" class="inline-flex items-center gap-2 bg-emerald-600/20 border border-emerald-500/40 text-emerald-400 hover:bg-emerald-600 hover:text-white px-4 py-2 rounded-xl text-xs font-bold transition">
                     <i class="fa-solid fa-download"></i> Download Addon / Map
                 </a>
                 {% endif %}
-
-                <!-- Post Actions (Likes & Comments) -->
-                <div class="flex items-center gap-4 pt-3 border-t border-slate-700/60">
-                    <form action="{{ url_for('like_post', post_id=post.id) }}" method="POST">
-                        <button type="submit" class="text-xs font-semibold text-slate-400 hover:text-rose-400 transition flex items-center gap-1.5">
-                            ❤️ {{ post.fake_likes or post.likes|length if post.likes else '0' }} Likes
-                        </button>
-                    </form>
-                    <span class="text-xs text-slate-500">💬 {{ post.comments|length if post.comments else '0' }} Comments</span>
-                </div>
             </div>
             {% endfor %}
         {% else %}
