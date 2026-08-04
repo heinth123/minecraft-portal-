@@ -1,54 +1,51 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Messages | Minecraft Myanmar</title>
-    <style>
-        :root { --bg-dark: #0f172a; --card-bg: #1e293b; --green: #22c55e; --text-main: #f8fafc; --text-muted: #94a3b8; }
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, sans-serif; }
-        body { background-color: var(--bg-dark); color: var(--text-main); min-height: 100vh; }
-        nav { display: flex; justify-content: space-between; align-items: center; padding: 1rem 2rem; background: #1e293b; border-bottom: 1px solid #334155; }
-        .nav-links { display: flex; gap: 15px; }
-        .nav-links a { color: var(--text-main); text-decoration: none; font-weight: bold; }
-        .container { max-width: 700px; margin: 2rem auto; padding: 0 1rem; }
-        .user-item { background: var(--card-bg); padding: 1rem; border-radius: 10px; border: 1px solid #334155; margin-bottom: 0.8rem; display: flex; justify-content: space-between; align-items: center; }
-        .pfp { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
-        .user-info { display: flex; align-items: center; gap: 10px; }
-        .chat-btn { background: var(--green); color: black; padding: 0.5rem 1rem; text-decoration: none; font-weight: bold; border-radius: 6px; }
-        .badge-verified { color: #38bdf8; }
-    </style>
-</head>
-<body>
+{% extends "base.html" %}
 
-    <nav>
-        <span style="font-weight: bold; color: var(--green);">⛏️ Minecraft Myanmar</span>
-        <div class="nav-links">
-            <a href="/">🏠 Home</a>
-            <a href="/community">🌐 Community</a>
-            <a href="/chat" style="color: var(--green);">💬 Chat</a>
-            <a href="/profile/{{ current_user.username }}">👤 Profile</a>
-        </div>
-    </nav>
-
-    <div class="container">
-        <h2 style="margin-bottom: 1.5rem;">💬 Direct Messages & Players</h2>
-        {% for user in users %}
-        <div class="user-item">
-            <div class="user-info">
-                <img src="{{ user.pfp_url }}" class="pfp">
-                <div>
-                    <div style="font-weight: bold;">
-                        {{ user.nickname }}
-                        {% if user.is_admin %}<span class="badge-verified">✔</span>{% endif %}
-                    </div>
-                    <div style="font-size: 0.8rem; color: var(--text-muted);">@{{ user.username }}</div>
-                </div>
-            </div>
-            <a href="/chat/dm/{{ user.id }}" class="chat-btn">Message 💬</a>
-        </div>
-        {% endfor %}
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+    <div class="border-b border-slate-700 pb-4 flex items-center justify-between">
+        <h1 class="text-2xl font-bold text-emerald-400 flex items-center gap-3">
+            <i class="fa-solid fa-comments"></i> Direct Messages & Players
+        </h1>
+        <span class="text-sm text-slate-400">Select a player to chat</span>
     </div>
 
-</body>
-</html>
+    <!-- Active Recent Conversations -->
+    {% if recent_chats %}
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-lg">
+        <h2 class="text-sm font-bold uppercase tracking-wider text-slate-400 mb-3">Recent Chats</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {% for player in recent_chats %}
+            <a href="{{ url_for('dm', receiver_id=player.id) }}" class="flex items-center gap-3 bg-slate-900/80 hover:bg-slate-700/60 p-3 rounded-xl border border-slate-700/50 transition group">
+                <img src="{{ player.safe_pfp }}" class="w-10 h-10 rounded-full object-cover">
+                <div class="flex-1">
+                    <p class="font-semibold text-slate-200 group-hover:text-emerald-400 transition">{{ player.nickname }}</p>
+                    <p class="text-xs text-slate-500">@{{ player.username }}</p>
+                </div>
+                <i class="fa-solid fa-chevron-right text-slate-500 group-hover:text-emerald-400 transition"></i>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- All Available Players to Chat With -->
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-lg">
+        <h2 class="text-sm font-bold uppercase tracking-wider text-slate-400 mb-3">All Players</h2>
+        {% if all_users %}
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+            {% for player in all_users %}
+            <a href="{{ url_for('dm', receiver_id=player.id) }}" class="flex items-center gap-3 bg-slate-900/60 hover:bg-slate-700/60 p-3 rounded-xl border border-slate-700/40 transition group">
+                <img src="{{ player.safe_pfp }}" class="w-9 h-9 rounded-full object-cover">
+                <div class="truncate">
+                    <p class="font-medium text-slate-200 text-sm group-hover:text-emerald-400 transition truncate">{{ player.nickname }}</p>
+                    <p class="text-xs text-slate-500 truncate">@{{ player.username }}</p>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-slate-400 text-sm text-center py-4">No other players registered yet!</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
