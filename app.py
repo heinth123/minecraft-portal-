@@ -1,5 +1,6 @@
 import os
 from datetime import datetime, timezone
+from urllib.parse import unquote
 from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
@@ -250,8 +251,8 @@ def login():
         return redirect(url_for('home'))
         
     if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '')
         
         user = User.query.filter_by(username=username).first()
         if user and check_password_hash(user.password_hash, password):
@@ -269,10 +270,14 @@ def register():
         return redirect(url_for('home'))
         
     if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
-        confirm_password = request.form.get('confirm_password')
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '')
+        confirm_password = request.form.get('confirm_password', '')
         
+        if not username:
+            flash('Username cannot be blank!', 'danger')
+            return redirect(url_for('register'))
+
         if password != confirm_password:
             flash('Passwords do not match!', 'danger')
             return redirect(url_for('register'))
@@ -472,7 +477,8 @@ def profile_like(user_id):
 @app.route('/profile/<username>')
 @login_required
 def profile(username):
-    user = User.query.filter_by(username=username).first_or_404()
+    decoded_username = unquote(username).strip()
+    user = User.query.filter_by(username=decoded_username).first_or_404()
     
     real_followers = Follow.query.filter_by(followed_id=user.id).count()
     real_profile_likes = ProfileLike.query.filter_by(receiver_id=user.id).count()
