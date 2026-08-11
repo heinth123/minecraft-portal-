@@ -4,7 +4,7 @@
 <style>
     /* Command Console Theme */
     .terminal-container {
-        max-width: 1100px;
+        max-width: 1150px;
         margin: 25px auto;
         padding: 0 15px;
         font-family: 'Consolas', 'Courier New', monospace;
@@ -92,7 +92,7 @@
 
     .cmd-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
         gap: 12px;
     }
 
@@ -149,7 +149,7 @@
             <span class="status-dot"></span>
             <span style="color: #10b981; font-weight: bold; font-size: 1.1rem;">root@minecraft-myanmar:~# admin_console</span>
         </div>
-        <div style="color: #64748b; font-size: 0.8rem;">25 COMMANDS LOADED ⚡</div>
+        <div style="color: #64748b; font-size: 0.8rem;">50 COMMANDS READY ⚡</div>
     </div>
 
     <!-- TERMINAL MAIN BODY -->
@@ -158,58 +158,89 @@
         <!-- COMMAND PROMPT EXECUTION BOX -->
         <div class="terminal-prompt-box">
             <label style="color: #34d399; font-weight: bold; font-size: 0.85rem; display: block; margin-bottom: 8px;">
-                ⌨️ COMMAND EXECUTOR (Type commands like /verify or /fake_likes):
+                ⌨️ COMMAND EXECUTOR:
             </label>
             <form action="{{ url_for('admin_execute_command') }}" method="POST" style="display: flex; gap: 10px;">
-                <input type="text" name="command_str" placeholder="Type command... e.g. /verify username OR /broadcast Hello Myanmar!" class="cmd-input" style="flex: 1;" required autocomplete="off">
+                <input type="text" name="command_str" placeholder="Type command... e.g. /ban Hudson OR /broadcast Welcome everyone!" class="cmd-input" style="flex: 1;" required autocomplete="off">
                 <button type="submit" class="cmd-btn">EXECUTE 🚀</button>
             </form>
         </div>
 
         <!-- COMMAND NAVIGATION TABS -->
         <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid #1e293b; padding-bottom: 15px; flex-wrap: wrap;">
-            <button class="cmd-tab-btn active" onclick="switchTab('tab-cmdlist')">📜 25 Command List</button>
+            <button class="cmd-tab-btn active" onclick="switchTab('tab-cmdlist')">📜 50 Commands List</button>
             <button class="cmd-tab-btn" onclick="switchTab('tab-users')">👥 User Control (/users)</button>
             <button class="cmd-tab-btn" onclick="switchTab('tab-posts')">📝 Content Manager (/posts)</button>
         </div>
 
-        <!-- 1. 25 COMMAND REFERENCE GRID -->
+        <!-- 1. 50 COMMAND REFERENCE GRID -->
         <div id="tab-cmdlist" class="cmd-tab-content">
-            <h3 style="color: #38bdf8; font-size: 0.95rem; margin-bottom: 15px;">Available Server Commands:</h3>
+            <h3 style="color: #38bdf8; font-size: 0.95rem; margin-bottom: 15px;">Available Server Commands (1 - 50):</h3>
             
             <div class="cmd-grid">
-                <!-- User Commands -->
-                <div class="cmd-card-item"><code>/verify [username]</code><span style="color: #94a3b8;">1. Instantly verify a user profile badge</span></div>
-                <div class="cmd-card-item"><code>/unverify [username]</code><span style="color: #94a3b8;">2. Remove verified status from user</span></div>
-                <div class="cmd-card-item"><code>/op [username]</code><span style="color: #94a3b8;">3. Promote user to Admin role</span></div>
-                <div class="cmd-card-item"><code>/deop [username]</code><span style="color: #94a3b8;">4. Demote user from Admin role</span></div>
-                <div class="cmd-card-item"><code>/ban [username]</code><span style="color: #94a3b8;">5. Lock out user account</span></div>
-                <div class="cmd-card-item"><code>/unban [username]</code><span style="color: #94a3b8;">6. Unlock banned user account</span></div>
-                <div class="cmd-card-item"><code>/set_followers [user] [num]</code><span style="color: #94a3b8;">7. Override user follower count</span></div>
-                <div class="cmd-card-item"><code>/set_likes [user] [num]</code><span style="color: #94a3b8;">8. Override profile like count</span></div>
-                <div class="cmd-card-item"><code>/set_nickname [user] [nick]</code><span style="color: #94a3b8;">9. Force edit user nickname</span></div>
-                <div class="cmd-card-item"><code>/set_pfp [user] [url]</code><span style="color: #94a3b8;">10. Force update user profile picture</span></div>
+                <!-- User Moderation & Roles -->
+                <div class="cmd-card-item"><code>1. /verify [user]</code><span style="color: #94a3b8;">Grant verified blue check badge</span></div>
+                <div class="cmd-card-item"><code>2. /unverify [user]</code><span style="color: #94a3b8;">Remove verified blue check badge</span></div>
+                <div class="cmd-card-item"><code>3. /op [user]</code><span style="color: #94a3b8;">Promote user to Admin role</span></div>
+                <div class="cmd-card-item"><code>4. /deop [user]</code><span style="color: #94a3b8;">Demote user from Admin role</span></div>
+                <div class="cmd-card-item"><code>5. /ban [user]</code><span style="color: #94a3b8;">Block user from logging in</span></div>
+                <div class="cmd-card-item"><code>6. /unban [user]</code><span style="color: #94a3b8;">Unblock banned user account</span></div>
+                <div class="cmd-card-item"><code>7. /mute [user]</code><span style="color: #94a3b8;">Silence user from chatting/posting</span></div>
+                <div class="cmd-card-item"><code>8. /unmute [user]</code><span style="color: #94a3b8;">Restore chat permissions for user</span></div>
+                <div class="cmd-card-item"><code>9. /kick [user]</code><span style="color: #94a3b8;">Force logout user session</span></div>
+                <div class="cmd-card-item"><code>10. /del_user [user]</code><span style="color: #94a3b8;">Permanently delete user account</span></div>
 
-                <!-- Content & Post Commands -->
-                <div class="cmd-card-item"><code>/del_post [post_id]</code><span style="color: #94a3b8;">11. Delete a specific post by ID</span></div>
-                <div class="cmd-card-item"><code>/post_likes [id] [num]</code><span style="color: #94a3b8;">12. Set fake likes for a post</span></div>
-                <div class="cmd-card-item"><code>/clear_posts [username]</code><span style="color: #94a3b8;">13. Wipe all posts from user</span></div>
-                <div class="cmd-card-item"><code>/pin_post [post_id]</code><span style="color: #94a3b8;">14. Move post to official feed</span></div>
-                <div class="cmd-card-item"><code>/del_comment [id]</code><span style="color: #94a3b8;">15. Delete inappropriate comment</span></div>
+                <!-- Profile Customization -->
+                <div class="cmd-card-item"><code>11. /set_followers [u] [num]</code><span style="color: #94a3b8;">Set fake follower count</span></div>
+                <div class="cmd-card-item"><code>12. /set_likes [u] [num]</code><span style="color: #94a3b8;">Set fake profile likes count</span></div>
+                <div class="cmd-card-item"><code>13. /set_nickname [u] [nick]</code><span style="color: #94a3b8;">Force update user nickname</span></div>
+                <div class="cmd-card-item"><code>14. /set_bio [u] [bio]</code><span style="color: #94a3b8;">Force update user profile bio</span></div>
+                <div class="cmd-card-item"><code>15. /set_pfp [u] [url]</code><span style="color: #94a3b8;">Force update user avatar image</span></div>
+                <div class="cmd-card-item"><code>16. /reset_pfp [user]</code><span style="color: #94a3b8;">Reset avatar to default Steve skin</span></div>
+                <div class="cmd-card-item"><code>17. /reset_bio [user]</code><span style="color: #94a3b8;">Reset profile bio to default</span></div>
+                <div class="cmd-card-item"><code>18. /reset_nick [user]</code><span style="color: #94a3b8;">Reset nickname back to username</span></div>
+                <div class="cmd-card-item"><code>19. /reset_followers [user]</code><span style="color: #94a3b8;">Remove fake followers override</span></div>
+                <div class="cmd-card-item"><code>20. /reset_likes [user]</code><span style="color: #94a3b8;">Remove fake profile likes override</span></div>
 
-                <!-- Mail & System Commands -->
-                <div class="cmd-card-item"><code>/broadcast [msg]</code><span style="color: #94a3b8;">16. Send system mail to ALL players</span></div>
-                <div class="cmd-card-item"><code>/clear_inbox [username]</code><span style="color: #94a3b8;">17. Wipe user's received inbox</span></div>
-                <div class="cmd-card-item"><code>/wipe_requests</code><span style="color: #94a3b8;">18. Clear pending verifications</span></div>
-                <div class="cmd-card-item"><code>/approve_all</code><span style="color: #94a3b8;">19. Mass approve pending requests</span></div>
-                <div class="cmd-card-item"><code>/system_msg [msg]</code><span style="color: #94a3b8;">20. Trigger pop-up alert for users</span></div>
+                <!-- Post & Content Management -->
+                <div class="cmd-card-item"><code>21. /del_post [post_id]</code><span style="color: #94a3b8;">Delete post by ID number</span></div>
+                <div class="cmd-card-item"><code>22. /post_likes [id] [num]</code><span style="color: #94a3b8;">Set fake likes for specific post</span></div>
+                <div class="cmd-card-item"><code>23. /clear_posts [user]</code><span style="color: #94a3b8;">Delete all posts by user</span></div>
+                <div class="cmd-card-item"><code>24. /pin_post [post_id]</code><span style="color: #94a3b8;">Move post to Official feed</span></div>
+                <div class="cmd-card-item"><code>25. /unpin_post [post_id]</code><span style="color: #94a3b8;">Move post to Community feed</span></div>
+                <div class="cmd-card-item"><code>26. /del_comment [comment_id]</code><span style="color: #94a3b8;">Delete comment by ID</span></div>
+                <div class="cmd-card-item"><code>27. /clear_comments [post_id]</code><span style="color: #94a3b8;">Wipe all comments on a post</span></div>
+                <div class="cmd-card-item"><code>28. /user_comments [user]</code><span style="color: #94a3b8;">Delete all comments by user</span></div>
+                <div class="cmd-card-item"><code>29. /wipe_all_posts</code><span style="color: #94a3b8;">Purge all community feed posts</span></div>
+                <div class="cmd-card-item"><code>30. /wipe_all_comments</code><span style="color: #94a3b8;">Purge all comments across site</span></div>
 
-                <!-- Server Mode & Utility Commands -->
-                <div class="cmd-card-item"><code>/maintenance [on/off]</code><span style="color: #94a3b8;">21. Toggle site maintenance mode</span></div>
-                <div class="cmd-card-item"><code>/reset_password [user] [pw]</code><span style="color: #94a3b8;">22. Force reset user password</span></div>
-                <div class="cmd-card-item"><code>/add_banned_word [word]</code><span style="color: #94a3b8;">23. Add new banned filter word</span></div>
-                <div class="cmd-card-item"><code>/server_info</code><span style="color: #94a3b8;">24. Show database stats & counts</span></div>
-                <div class="cmd-card-item"><code>/reboot_db</code><span style="color: #94a3b8;">25. Refresh database schema tables</span></div>
+                <!-- Mailbox & DM Moderation -->
+                <div class="cmd-card-item"><code>31. /broadcast [msg]</code><span style="color: #94a3b8;">Send system mail to ALL users</span></div>
+                <div class="cmd-card-item"><code>32. /send_mail [u] [sub] [msg]</code><span style="color: #94a3b8;">Send direct mail as system</span></div>
+                <div class="cmd-card-item"><code>33. /clear_inbox [user]</code><span style="color: #94a3b8;">Delete received mails for user</span></div>
+                <div class="cmd-card-item"><code>34. /clear_sent [user]</code><span style="color: #94a3b8;">Delete sent mails for user</span></div>
+                <div class="cmd-card-item"><code>35. /clear_dms [u1] [u2]</code><span style="color: #94a3b8;">Delete DM chat between 2 users</span></div>
+                <div class="cmd-card-item"><code>36. /wipe_all_mails</code><span style="color: #94a3b8;">Purge entire mailbox database</span></div>
+                <div class="cmd-card-item"><code>37. /wipe_all_dms</code><span style="color: #94a3b8;">Purge all private DM messages</span></div>
+
+                <!-- Verification Requests -->
+                <div class="cmd-card-item"><code>38. /wipe_requests</code><span style="color: #94a3b8;">Clear pending verifications</span></div>
+                <div class="cmd-card-item"><code>39. /approve_all</code><span style="color: #94a3b8;">Mass approve all verifications</span></div>
+                <div class="cmd-card-item"><code>40. /reject_all</code><span style="color: #94a3b8;">Mass reject all verifications</span></div>
+
+                <!-- Security & Filter Rules -->
+                <div class="cmd-card-item"><code>41. /reset_password [u] [pw]</code><span style="color: #94a3b8;">Force change user password</span></div>
+                <div class="cmd-card-item"><code>42. /add_banned_word [word]</code><span style="color: #94a3b8;">Add word to profanity filter</span></div>
+                <div class="cmd-card-item"><code>43. /del_banned_word [word]</code><span style="color: #94a3b8;">Remove word from filter list</span></div>
+                <div class="cmd-card-item"><code>44. /list_banned_words</code><span style="color: #94a3b8;">Print active profanity list</span></div>
+
+                <!-- Server Info & Maintenance -->
+                <div class="cmd-card-item"><code>45. /server_info</code><span style="color: #94a3b8;">Print user/post/mail database counts</span></div>
+                <div class="cmd-card-item"><code>46. /user_info [user]</code><span style="color: #94a3b8;">Print detailed account breakdown</span></div>
+                <div class="cmd-card-item"><code>47. /reboot_db</code><span style="color: #94a3b8;">Re-check and rebuild database tables</span></div>
+                <div class="cmd-card-item"><code>48. /maintenance_on</code><span style="color: #94a3b8;">Lock application for maintenance</span></div>
+                <div class="cmd-card-item"><code>49. /maintenance_off</code><span style="color: #94a3b8;">Unlock application for public use</span></div>
+                <div class="cmd-card-item"><code>50. /clear_friends [user]</code><span style="color: #94a3b8;">Wipe all friends for a user</span></div>
             </div>
         </div>
 
