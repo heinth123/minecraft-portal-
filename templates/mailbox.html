@@ -1,226 +1,241 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container py-4" style="max-width: 900px;">
+<style>
+    /* Modern Dark Mailbox Styling */
+    .mailbox-container {
+        max-width: 1000px;
+        margin: 20px auto;
+        padding: 0 15px;
+        color: #f1f5f9;
+    }
     
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>📬 Mailbox</h2>
-        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#sendMailModal">
-            ✏️ Send New Mail
+    .glass-card {
+        background: #1e293b;
+        border: 1px solid #334155;
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+        margin-bottom: 24px;
+    }
+
+    /* Form Controls Styling */
+    .custom-input, .custom-select, .custom-textarea {
+        width: 100%;
+        background-color: #0f172a !important;
+        border: 1px solid #334155 !important;
+        color: #ffffff !important;
+        padding: 12px 16px;
+        border-radius: 10px;
+        font-size: 0.9rem;
+        outline: none;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .custom-input:focus, .custom-select:focus, .custom-textarea:focus {
+        border-color: #10b981 !important;
+        box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2) !important;
+    }
+
+    .custom-select option {
+        background-color: #0f172a;
+        color: #ffffff;
+    }
+
+    /* Buttons */
+    .btn-emerald {
+        background: #10b981;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 10px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+    .btn-emerald:hover {
+        background: #059669;
+    }
+
+    .btn-rose {
+        background: #f43f5e;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 10px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+    .btn-rose:hover {
+        background: #e11d48;
+    }
+
+    /* Request Item Cards */
+    .req-card {
+        background: #0f172a;
+        border: 1px solid #334155;
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 12px;
+    }
+
+    .link-badge {
+        color: #38bdf8;
+        text-decoration: none;
+        background: rgba(56, 189, 248, 0.1);
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        border: 1px solid rgba(56, 189, 248, 0.2);
+    }
+    .link-badge:hover {
+        background: rgba(56, 189, 248, 0.2);
+    }
+</style>
+
+<div class="mailbox-container">
+    
+    <!-- Title Bar -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+        <h1 style="font-size: 1.8rem; font-weight: 700; color: #34d399; margin: 0; display: flex; align-items: center; gap: 10px;">
+            📬 Mail System
+        </h1>
+        <button class="btn-emerald" onclick="document.getElementById('sendMailModal').style.display='flex'">
+            ✏️ Compose Mail
         </button>
     </div>
 
-    <!-- ADMIN VERIFICATION REQUESTS PANEL -->
+    <!-- 🛡️ ADMIN VERIFICATION REVIEW PANEL -->
     {% if current_user.is_admin %}
-        <div class="card bg-dark text-white border-warning mb-4 shadow">
-            <div class="card-header border-warning d-flex justify-content-between align-items-center">
-                <h5 class="mb-0 text-warning">🛡️ Admin Verification Requests Panel</h5>
-                <span class="badge bg-warning text-dark">{{ pending_verifications|length }} Pending</span>
-            </div>
-            <div class="card-body">
-                {% if pending_verifications %}
-                    <div class="table-responsive">
-                        <table class="table table-dark table-hover align-middle mb-0">
-                            <thead>
-                                <tr>
-                                    <th>User</th>
-                                    <th>Real Name / Age</th>
-                                    <th>Reason</th>
-                                    <th>Face Photo</th>
-                                    <th>Links</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for req in pending_verifications %}
-                                    <tr>
-                                        <td>
-                                            <a href="{{ url_for('profile', username=req.user.username) }}" class="text-info fw-bold text-decoration-none">
-                                                @{{ req.user.username }}
-                                            </a>
-                                        </td>
-                                        <td>
-                                            <div>{{ req.real_name }}</div>
-                                            <small class="text-muted">Age: {{ req.age }} | Nick: {{ req.nickname or 'N/A' }}</small>
-                                        </td>
-                                        <td>
-                                            <span class="badge bg-secondary">{{ req.reason_choice }}</span>
-                                            {% if req.reason_other %}
-                                                <div class="small text-muted mt-1">{{ req.reason_other }}</div>
-                                            {% endif %}
-                                        </td>
-                                        <td>
-                                            {% if req.face_photo_url %}
-                                                <a href="{{ req.face_photo_url }}" target="_blank">
-                                                    <img src="{{ req.face_photo_url }}" class="rounded border border-secondary" style="width: 45px; height: 45px; object-fit: cover;">
-                                                </a>
-                                            {% else %}
-                                                <span class="text-muted">No photo</span>
-                                            {% endif %}
-                                        </td>
-                                        <td>
-                                            <small>
-                                                {% if req.link_1 %}<a href="{{ req.link_1 }}" target="_blank" class="text-info">Link 1</a>{% endif %}
-                                                {% if req.link_2 %}| <a href="{{ req.link_2 }}" target="_blank" class="text-info">Link 2</a>{% endif %}
-                                                {% if req.link_3 %}| <a href="{{ req.link_3 }}" target="_blank" class="text-info">Link 3</a>{% endif %}
-                                            </small>
-                                        </td>
-                                        <td>
-                                            <div class="d-flex gap-1">
-                                                <form action="{{ url_for('verify_action', req_id=req.id) }}" method="POST">
-                                                    <input type="hidden" name="action" value="approve">
-                                                    <button type="submit" class="btn btn-sm btn-success">Approve ✅</button>
-                                                </form>
-                                                
-                                                <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#rejectModal{{ req.id }}">Reject ❌</button>
-                                            </div>
-
-                                            <!-- Reject Reason Modal -->
-                                            <div class="modal fade" id="rejectModal{{ req.id }}" tabindex="-1">
-                                                <div class="modal-dialog modal-dialog-centered text-dark">
-                                                    <div class="modal-content bg-dark text-white border-danger">
-                                                        <form action="{{ url_for('verify_action', req_id=req.id) }}" method="POST">
-                                                            <input type="hidden" name="action" value="reject">
-                                                            <div class="modal-header border-danger">
-                                                                <h5 class="modal-title">Reject Verification Request</h5>
-                                                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                                                            </div>
-                                                            <div class="modal-body">
-                                                                <p>Providing a reason for rejecting @{{ req.user.username }}'s request:</p>
-                                                                <textarea name="reason" class="form-control bg-secondary text-white" rows="3" placeholder="Explain why this request is rejected..." required></textarea>
-                                                            </div>
-                                                            <div class="modal-footer border-danger">
-                                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                                                <button type="submit" class="btn btn-danger">Confirm Reject</button>
-                                                            </div>
-                                                        </form>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                        </td>
-                                    </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                {% else %}
-                    <p class="text-muted mb-0">No pending verification requests at this time. 👍</p>
-                {% endif %}
-            </div>
+    <div class="glass-card" style="border-color: #f59e0b;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid #334155; padding-bottom: 12px;">
+            <h2 style="font-size: 1.2rem; font-weight: 700; color: #fbbf24; margin: 0; display: flex; align-items: center; gap: 8px;">
+                🛡️ Pending Account Verification Requests
+            </h2>
+            <span style="background: rgba(245, 158, 11, 0.2); color: #fbbf24; padding: 4px 12px; border-radius: 20px; font-weight: 600; font-size: 0.8rem;">
+                {{ pending_verifications|length }} Pending
+            </span>
         </div>
+
+        {% if pending_verifications %}
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                {% for req in pending_verifications %}
+                <div class="req-card">
+                    <!-- User Header -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #1e293b; padding-bottom: 8px;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <img src="{{ req.user.safe_pfp }}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid #10b981;">
+                            <div>
+                                <div style="font-weight: 700; color: white;">{{ req.user.nickname }} <span style="color: #94a3b8; font-weight: normal;">(@{{ req.user.username }})</span></div>
+                                <div style="font-size: 0.75rem; color: #64748b;">Submitted: {{ req.created_at.strftime('%Y-%m-%d %H:%M') if req.created_at else '' }}</div>
+                            </div>
+                        </div>
+                        <span style="background: #334155; color: #38bdf8; padding: 2px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600;">
+                            Reason: {{ req.reason_choice }}
+                        </span>
+                    </div>
+
+                    <!-- Details Grid -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; font-size: 0.85rem; color: #cbd5e1; margin-bottom: 12px;">
+                        <div><strong style="color: #34d399;">Real Name:</strong> {{ req.real_name }}</div>
+                        <div><strong style="color: #34d399;">Age:</strong> {{ req.age }}</div>
+                        <div><strong style="color: #34d399;">Known Admin:</strong> {{ req.admin_known }}</div>
+                        {% if req.reason_other %}
+                        <div style="grid-column: 1 / -1;"><strong style="color: #34d399;">Note:</strong> {{ req.reason_other }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Links & Face Photo -->
+                    <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 16px;">
+                        {% if req.face_photo_url %}
+                        <a href="{{ req.face_photo_url }}" target="_blank" class="link-badge" style="color: #34d399; border-color: rgba(52, 211, 153, 0.3);">
+                            📷 View Face Photo
+                        </a>
+                        {% endif %}
+                        {% if req.link_1 %}<a href="{{ req.link_1 }}" target="_blank" class="link-badge">Link 1 🔗</a>{% endif %}
+                        {% if req.link_2 %}<a href="{{ req.link_2 }}" target="_blank" class="link-badge">Link 2 🔗</a>{% endif %}
+                        {% if req.link_3 %}<a href="{{ req.link_3 }}" target="_blank" class="link-badge">Link 3 🔗</a>{% endif %}
+                        {% if req.link_4 %}<a href="{{ req.link_4 }}" target="_blank" class="link-badge">Link 4 🔗</a>{% endif %}
+                        {% if req.link_5 %}<a href="{{ req.link_5 }}" target="_blank" class="link-badge">Link 5 🔗</a>{% endif %}
+                    </div>
+
+                    <!-- Actions Form -->
+                    <form action="{{ url_for('verify_action', req_id=req.id) }}" method="POST" style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <input type="text" name="reason" placeholder="Optional rejection/approval reason..." class="custom-input" style="flex: 1; min-width: 200px; padding: 8px 12px;">
+                        <button type="submit" name="action" value="approve" class="btn-emerald">🟢 Approve</button>
+                        <button type="submit" name="action" value="reject" class="btn-rose">🔴 Reject</button>
+                    </form>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p style="text-align: center; color: #64748b; margin: 10px 0;">No pending verification requests at this time! 👍</p>
+        {% endif %}
+    </div>
     {% endif %}
 
-    <!-- MAIL TABS -->
-    <ul class="nav nav-tabs mb-4 border-secondary" id="mailTabs" role="tablist">
-        <li class="nav-item" role="presentation">
-            <button class="nav-link active text-white fw-bold" id="inbox-tab" data-bs-toggle="tab" data-bs-target="#inbox" type="button" role="tab">
-                📥 Inbox ({{ received_mails|length }})
-            </button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link text-white fw-bold" id="sent-tab" data-bs-toggle="tab" data-bs-target="#sent" type="button" role="tab">
-                📤 Sent ({{ sent_mails|length }})
-            </button>
-        </li>
-    </ul>
+    <!-- Inbox List -->
+    <div class="glass-card">
+        <h2 style="font-size: 1.2rem; font-weight: 700; color: white; margin: 0 0 16px 0; display: flex; align-items: center; gap: 8px;">
+            📥 Received Letters
+        </h2>
 
-    <div class="tab-content" id="mailTabsContent">
-        
-        <!-- INBOX -->
-        <div class="tab-pane fade show active" id="inbox" role="tabpanel">
-            {% if received_mails %}
-                <div class="list-group">
-                    {% for mail in received_mails %}
-                        <div class="list-group-item bg-dark text-white border-secondary mb-3 rounded shadow-sm">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <div class="d-flex align-items-center gap-2">
-                                    <img src="{{ mail.sender.safe_pfp }}" class="rounded-circle" style="width: 35px; height: 35px; object-fit: cover;">
-                                    <div>
-                                        <strong class="text-success">{{ mail.sender.nickname }}</strong>
-                                        <small class="text-muted">(@{{ mail.sender.username }})</small>
-                                    </div>
-                                </div>
-                                <small class="text-muted">{{ mail.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
-                            </div>
-                            <h5 class="text-warning mb-2">{{ mail.subject }}</h5>
-                            <p class="mb-0 text-light" style="white-space: pre-wrap;">{{ mail.content }}</p>
+        {% if received_mails %}
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                {% for mail in received_mails %}
+                <div class="req-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-bottom: 1px solid #1e293b; padding-bottom: 8px;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <img src="{{ mail.sender.safe_pfp }}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">
+                            <span style="font-weight: 700; color: #cbd5e1; font-size: 0.9rem;">{{ mail.sender.nickname }} <small style="color: #64748b;">(@{{ mail.sender.username }})</small></span>
                         </div>
-                    {% endfor %}
+                        <span style="font-size: 0.75rem; color: #64748b;">{{ mail.created_at.strftime('%Y-%m-%d %H:%M') if mail.created_at else '' }}</span>
+                    </div>
+                    <h4 style="margin: 0 0 6px 0; color: #34d399; font-size: 1rem;">📌 {{ mail.subject }}</h4>
+                    <p style="margin: 0; color: #e2e8f0; font-size: 0.9rem; white-space: pre-wrap; line-height: 1.5;">{{ mail.content }}</p>
                 </div>
-            {% else %}
-                <div class="text-center text-muted py-5">
-                    <h5>No mails received yet! 📭</h5>
-                </div>
-            {% endif %}
-        </div>
-
-        <!-- SENT -->
-        <div class="tab-pane fade" id="sent" role="tabpanel">
-            {% if sent_mails %}
-                <div class="list-group">
-                    {% for mail in sent_mails %}
-                        <div class="list-group-item bg-dark text-white border-secondary mb-3 rounded shadow-sm">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <div class="d-flex align-items-center gap-2">
-                                    <img src="{{ mail.receiver.safe_pfp }}" class="rounded-circle" style="width: 35px; height: 35px; object-fit: cover;">
-                                    <div>
-                                        <span class="text-muted">To:</span> <strong class="text-info">{{ mail.receiver.nickname }}</strong>
-                                        <small class="text-muted">(@{{ mail.receiver.username }})</small>
-                                    </div>
-                                </div>
-                                <small class="text-muted">{{ mail.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
-                            </div>
-                            <h5 class="text-warning mb-2">{{ mail.subject }}</h5>
-                            <p class="mb-0 text-light" style="white-space: pre-wrap;">{{ mail.content }}</p>
-                        </div>
-                    {% endfor %}
-                </div>
-            {% else %}
-                <div class="text-center text-muted py-5">
-                    <h5>You haven't sent any mails yet! 📤</h5>
-                </div>
-            {% endif %}
-        </div>
-
+                {% endfor %}
+            </div>
+        {% else %}
+            <div style="text-align: center; color: #64748b; padding: 30px 0;">
+                <p style="font-size: 1.1rem; margin: 0;">Your mailbox is empty! 📭</p>
+            </div>
+        {% endif %}
     </div>
 
 </div>
 
-<!-- SEND MAIL MODAL -->
-<div class="modal fade" id="sendMailModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content bg-dark text-white border-success">
-            <form action="{{ url_for('mailbox') }}" method="POST">
-                <div class="modal-header border-success">
-                    <h5 class="modal-title text-success">✉️ Send New Mail</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Recipient User:</label>
-                        <select name="receiver_id" class="form-select bg-secondary text-white" required>
-                            <option value="" disabled selected>Choose a user...</option>
-                            {% for u in all_users %}
-                                <option value="{{ u.id }}">@{{ u.username }} ({{ u.nickname }})</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Subject:</label>
-                        <input type="text" name="subject" class="form-control bg-secondary text-white" placeholder="Enter subject line..." required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Message Content:</label>
-                        <textarea name="content" class="form-control bg-secondary text-white" rows="5" placeholder="Write your mail message here..." required></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer border-success">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-success">Send Mail 🚀</button>
-                </div>
-            </form>
-        </div>
+<!-- COMPOSE MAIL MODAL -->
+<div id="sendMailModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); justify-content: center; align-items: center; z-index: 1000;">
+    <div style="background: #1e293b; border: 1px solid #334155; padding: 24px; border-radius: 16px; width: 90%; max-width: 500px; color: white;">
+        <h3 style="margin-top: 0; color: #34d399; margin-bottom: 16px;">✉️ Send New Mail</h3>
+        
+        <form action="{{ url_for('mailbox') }}" method="POST" style="display: flex; flex-direction: column; gap: 14px;">
+            <div>
+                <label style="display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 4px; font-weight: 600;">RECIPIENT</label>
+                <select name="receiver_id" class="custom-select" required>
+                    <option value="" disabled selected>Select Player...</option>
+                    {% for u in all_users %}
+                        <option value="{{ u.id }}">{{ u.nickname }} (@{{ u.username }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label style="display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 4px; font-weight: 600;">SUBJECT</label>
+                <input type="text" name="subject" placeholder="Mail subject..." class="custom-input" required>
+            </div>
+
+            <div>
+                <label style="display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 4px; font-weight: 600;">MESSAGE</label>
+                <textarea name="content" rows="4" placeholder="Write your message here..." class="custom-textarea" required></textarea>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;">
+                <button type="button" onclick="document.getElementById('sendMailModal').style.display='none'" style="background: #475569; color: white; border: none; padding: 10px 18px; border-radius: 10px; cursor: pointer; font-weight: 600;">Cancel</button>
+                <button type="submit" class="btn-emerald">Send Mail 🚀</button>
+            </div>
+        </form>
     </div>
 </div>
 {% endblock %}
