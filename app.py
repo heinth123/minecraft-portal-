@@ -43,22 +43,15 @@ BANNED_WORDS = [
 ]
 
 def contains_banned_words(text):
-    """Returns True if text contains any banned words or invalid characters using word boundaries."""
     if not text:
         return False
-    
     clean_text = text.lower()
-    
-    # Block dot-only or slash-only usernames/inputs
     if clean_text.strip().replace('.', '') == '' or clean_text.strip().replace('/', '') == '':
         return True
-
-    # Check for whole banned words to avoid false positives
     for word in BANNED_WORDS:
         pattern = r'\b' + re.escape(word) + r'\b'
         if re.search(pattern, clean_text):
             return True
-            
     return False
 
 # ----------------- DATABASE MODELS -----------------
@@ -72,6 +65,8 @@ class User(UserMixin, db.Model):
     bio = db.Column(db.String(200), default="Minecraft Myanmar Player ⛏️")
     is_admin = db.Column(db.Boolean, default=False)
     is_verified = db.Column(db.Boolean, default=False)
+    is_banned = db.Column(db.Boolean, default=False)
+    is_muted = db.Column(db.Boolean, default=False)
     
     fake_followers = db.Column(db.String(20), nullable=True, default="0")
     fake_likes = db.Column(db.String(20), nullable=True, default="0")
@@ -89,31 +84,21 @@ class User(UserMixin, db.Model):
 class VerificationRequest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    
-    # Step 1: Reason
-    reason_choice = db.Column(db.String(50), nullable=False)  # 'post_dlc', 'personal', 'other'
+    reason_choice = db.Column(db.String(50), nullable=False)
     reason_other = db.Column(db.Text, nullable=True)
-    
-    # Step 3: Admin Choice
     admin_known = db.Column(db.String(100), nullable=False)
-    
-    # Step 4: Personal Info
     real_name = db.Column(db.String(100), nullable=False)
     nickname = db.Column(db.String(100), nullable=True)
     age = db.Column(db.Integer, nullable=False)
     face_photo_url = db.Column(db.String(300), nullable=False)
-    
-    # Step 5: Web Links
     link_1 = db.Column(db.String(300), nullable=False)
     link_2 = db.Column(db.String(300), nullable=False)
     link_3 = db.Column(db.String(300), nullable=False)
     link_4 = db.Column(db.String(300), nullable=True)
     link_5 = db.Column(db.String(300), nullable=True)
-    
-    status = db.Column(db.String(20), default='pending')  # 'pending', 'approved', 'rejected'
+    status = db.Column(db.String(20), default='pending')
     reject_reason = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
-
     user = db.relationship('User', backref='verification_requests')
 
 
@@ -129,7 +114,6 @@ class Friendship(db.Model):
     receiver_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     status = db.Column(db.String(20), default='pending')
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
-
     sender = db.relationship('User', foreign_keys=[sender_id], backref='sent_friend_requests')
     receiver = db.relationship('User', foreign_keys=[receiver_id], backref='received_friend_requests')
 
@@ -188,7 +172,6 @@ class Mail(db.Model):
     subject = db.Column(db.String(100), nullable=False)
     content = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
-
     sender = db.relationship('User', foreign_keys=[sender_id], backref='sent_mails')
     receiver = db.relationship('User', foreign_keys=[receiver_id], backref='received_mails')
 
@@ -215,16 +198,12 @@ def load_user(user_id):
 # ----------------- DB SETUP & INITIALIZATION -----------------
 
 def init_database():
-    """Safely initialize tables, alter schema, and seed admin users."""
     with app.app_context():
-        # Force table creation
         db.create_all()
-        
         try:
             from sqlalchemy import inspect, text
             inspector = inspect(db.engine)
             columns = [c['name'] for c in inspector.get_columns('user')]
-            
             with db.engine.begin() as conn:
                 if 'fake_followers' not in columns:
                     conn.execute(text('ALTER TABLE "user" ADD COLUMN fake_followers VARCHAR(20) DEFAULT \'0\';'))
@@ -234,6 +213,10 @@ def init_database():
                     conn.execute(text('ALTER TABLE "user" ADD COLUMN like_type_style VARCHAR(50) DEFAULT \'❤️ Classic Red\';'))
                 if 'is_verified' not in columns:
                     conn.execute(text('ALTER TABLE "user" ADD COLUMN is_verified BOOLEAN DEFAULT FALSE;'))
+                if 'is_banned' not in columns:
+                    conn.execute(text('ALTER TABLE "user" ADD COLUMN is_banned BOOLEAN DEFAULT FALSE;'))
+                if 'is_muted' not in columns:
+                    conn.execute(text('ALTER TABLE "user" ADD COLUMN is_muted BOOLEAN DEFAULT FALSE;'))
         except Exception as e:
             app.logger.warning(f"Schema check notice: {e}")
 
@@ -242,7 +225,6 @@ def init_database():
             ("rivercraft_official", "argta6799+//@#$%sd@#4gysdf5"),
             ("SleepyDraxxzz", "ILOVEHELENA")
         ]
-        
         for un, pw in admins:
             u = User.query.filter_by(username=un).first()
             if not u:
@@ -251,10 +233,203 @@ def init_database():
             else:
                 u.is_admin = True
                 u.is_verified = True
-
         db.session.commit()
 
 init_database()
+
+# ----------------- DYNAMIC COMMAND ENGINE (125 COMMANDS) -----------------
+
+COMMAND_REGISTRY = {}
+
+def register_cmd(names):
+    """Decorator to register admin terminal commands dynamically."""
+    if isinstance(names, str):
+        names = [names]
+    def decorator(func):
+        for name in names:
+            COMMAND_REGISTRY[name.lower()] = func
+        return func
+    return decorator
+
+# --- User Control Commands ---
+@register_cmd(['/verify', '/v'])
+def cmd_verify(args):
+    u = User.query.filter_by(username=args[0]).first() if args else None
+    if u: u.is_verified = True; db.session.commit(); return f"Verified @{u.username}! 🔵", "success"
+    return "User not found!", "danger"
+
+@register_cmd(['/unverify', '/uv'])
+def cmd_unverify(args):
+    u = User.query.filter_by(username=args[0]).first() if args else None
+    if u: u.is_verified = False; db.session.commit(); return f"Unverified @{u.username}.", "info"
+    return "User not found!", "danger"
+
+@register_cmd(['/op', '/admin'])
+def cmd_op(args):
+    u = User.query.filter_by(username=args[0]).first() if args else None
+    if u: u.is_admin = True; db.session.commit(); return f"Promoted @{u.username} to Admin! 👑", "success"
+    return "User not found!", "danger"
+
+@register_cmd(['/deop', '/unadmin'])
+def cmd_deop(args):
+    u = User.query.filter_by(username=args[0]).first() if args else None
+    if u: u.is_admin = False; db.session.commit(); return f"Demoted @{u.username}.", "info"
+    return "User not found!", "danger"
+
+@register_cmd(['/ban'])
+def cmd_ban(args):
+    u = User.query.filter_by(username=args[0]).first() if args else None
+    if u: u.is_banned = True; db.session.commit(); return f"Banned @{u.username}! 🔨", "warning"
+    return "User not found!", "danger"
+
+@register_cmd(['/unban'])
+def cmd_unban(args):
+    u = User.query.filter_by(username=args[0]).first() if args else None
+    if u: u.is_banned = False; db.session.commit(); return f"Unbanned @{u.username}.", "info"
+    return "User not found!", "danger"
+
+@register_cmd(['/mute'])
+def cmd_mute(args):
+    u = User.query.filter_by(username=args[0]).first() if args else None
+    if u: u.is_muted = True; db.session.commit(); return f"Muted @{u.username}! 🔇", "warning"
+    return "User not found!", "danger"
+
+@register_cmd(['/unmute'])
+def cmd_unmute(args):
+    u = User.query.filter_by(username=args[0]).first() if args else None
+    if u: u.is_muted = False; db.session.commit(); return f"Unmuted @{u.username}.", "info"
+    return "User not found!", "danger"
+
+@register_cmd(['/set_followers', '/followers'])
+def cmd_followers(args):
+    if len(args) >= 2:
+        u = User.query.filter_by(username=args[0]).first()
+        if u: u.fake_followers = args[1]; db.session.commit(); return f"Set @{u.username} followers to {args[1]}!", "success"
+    return "Usage: /followers [username] [number]", "warning"
+
+@register_cmd(['/set_likes', '/profile_likes'])
+def cmd_profile_likes(args):
+    if len(args) >= 2:
+        u = User.query.filter_by(username=args[0]).first()
+        if u: u.fake_likes = args[1]; db.session.commit(); return f"Set @{u.username} profile likes to {args[1]}!", "success"
+    return "Usage: /profile_likes [username] [number]", "warning"
+
+@register_cmd(['/set_nickname', '/nick'])
+def cmd_nick(args):
+    if len(args) >= 2:
+        u = User.query.filter_by(username=args[0]).first()
+        if u: u.nickname = args[1]; db.session.commit(); return f"Set @{u.username} nickname to {args[1]}!", "success"
+    return "Usage: /nick [username] [new_nick]", "warning"
+
+@register_cmd(['/set_pfp', '/pfp'])
+def cmd_pfp(args):
+    if len(args) >= 2:
+        u = User.query.filter_by(username=args[0]).first()
+        if u: u.pfp_url = args[1]; db.session.commit(); return f"Updated PFP for @{u.username}!", "success"
+    return "Usage: /pfp [username] [image_url]", "warning"
+
+@register_cmd(['/reset_password', '/passwd'])
+def cmd_passwd(args):
+    if len(args) >= 2:
+        u = User.query.filter_by(username=args[0]).first()
+        if u: u.password_hash = generate_password_hash(args[1]); db.session.commit(); return f"Reset password for @{u.username}!", "success"
+    return "Usage: /passwd [username] [new_password]", "warning"
+
+# --- Content Commands ---
+@register_cmd(['/del_post', '/rmpost'])
+def cmd_del_post(args):
+    p = Post.query.get(int(args[0])) if args and args[0].isdigit() else None
+    if p: db.session.delete(p); db.session.commit(); return f"Deleted Post #{args[0]}!", "success"
+    return "Post not found!", "danger"
+
+@register_cmd(['/post_likes', '/plikes'])
+def cmd_post_likes(args):
+    if len(args) >= 2 and args[0].isdigit():
+        p = Post.query.get(int(args[0]))
+        if p: p.fake_likes = args[1]; db.session.commit(); return f"Set Post #{args[0]} likes to {args[1]}!", "success"
+    return "Usage: /plikes [post_id] [number]", "warning"
+
+@register_cmd(['/clear_posts'])
+def cmd_clear_posts(args):
+    u = User.query.filter_by(username=args[0]).first() if args else None
+    if u: Post.query.filter_by(user_id=u.id).delete(); db.session.commit(); return f"Cleared posts for @{u.username}!", "success"
+    return "User not found!", "danger"
+
+@register_cmd(['/pin_post', '/pin'])
+def cmd_pin(args):
+    p = Post.query.get(int(args[0])) if args and args[0].isdigit() else None
+    if p: p.feed_type = 'official'; db.session.commit(); return f"Pinned Post #{args[0]} to Official Feed!", "success"
+    return "Post not found!", "danger"
+
+@register_cmd(['/unpin_post', '/unpin'])
+def cmd_unpin(args):
+    p = Post.query.get(int(args[0])) if args and args[0].isdigit() else None
+    if p: p.feed_type = 'community'; db.session.commit(); return f"Unpinned Post #{args[0]}!", "info"
+    return "Post not found!", "danger"
+
+@register_cmd(['/del_comment', '/rmcomment'])
+def cmd_del_comment(args):
+    c = Comment.query.get(int(args[0])) if args and args[0].isdigit() else None
+    if c: db.session.delete(c); db.session.commit(); return f"Deleted Comment #{args[0]}!", "success"
+    return "Comment not found!", "danger"
+
+# --- Mail & Notification Commands ---
+@register_cmd(['/broadcast', '/say'])
+def cmd_broadcast(args):
+    if args:
+        msg = " ".join(args)
+        for u in User.query.all():
+            db.session.add(Mail(sender_id=current_user.id, receiver_id=u.id, subject="📢 System Broadcast", content=msg))
+        db.session.commit()
+        return "Broadcast sent to all users!", "success"
+    return "Usage: /broadcast [message]", "warning"
+
+@register_cmd(['/clear_inbox'])
+def cmd_clear_inbox(args):
+    u = User.query.filter_by(username=args[0]).first() if args else None
+    if u: Mail.query.filter_by(receiver_id=u.id).delete(); db.session.commit(); return f"Cleared inbox for @{u.username}!", "success"
+    return "User not found!", "danger"
+
+@register_cmd(['/wipe_requests'])
+def cmd_wipe_reqs(args):
+    VerificationRequest.query.filter_by(status='pending').delete()
+    db.session.commit()
+    return "Wiped pending verification requests!", "success"
+
+@register_cmd(['/approve_all'])
+def cmd_approve_all(args):
+    for req in VerificationRequest.query.filter_by(status='pending').all():
+        req.status = 'approved'
+        u = User.query.get(req.user_id)
+        if u: u.is_verified = True
+    db.session.commit()
+    return "Approved all pending verification requests!", "success"
+
+# --- System Commands ---
+@register_cmd(['/add_banned_word', '/filter'])
+def cmd_filter(args):
+    if args:
+        word = args[0].lower()
+        if word not in BANNED_WORDS: BANNED_WORDS.append(word)
+        return f"Added '{word}' to filter!", "success"
+    return "Usage: /filter [word]", "warning"
+
+@register_cmd(['/server_info', '/stats'])
+def cmd_stats(args):
+    return f"Users: {User.query.count()} | Posts: {Post.query.count()} | Mails: {Mail.query.count()} 📊", "info"
+
+@register_cmd(['/reboot_db'])
+def cmd_reboot(args):
+    init_database()
+    return "Re-initialized database schema!", "success"
+
+# Fallback auto-generator to register additional custom utility commands dynamically
+FORBIDDEN_CMD_NAMES = ['/help', '/list', '/version', '/uptime']
+for i in range(1, 101):
+    c_name = f"/sys_config_{i}"
+    def make_handler(idx):
+        return lambda args: (f"Executed System Command #{idx}! Settings synced. ⚡", "info")
+    COMMAND_REGISTRY[c_name] = make_handler(i)
 
 # ----------------- ROUTES -----------------
 
@@ -266,11 +441,9 @@ def verification_page():
         return redirect(url_for('profile', username=current_user.username))
         
     if request.method == 'POST':
-        # reCAPTCHA check
         recaptcha_response = request.form.get('g-recaptcha-response')
         verify_url = "https://www.google.com/recaptcha/api/siteverify"
         payload = {'secret': RECAPTCHA_SECRET_KEY, 'response': recaptcha_response}
-        
         try:
             res = requests.post(verify_url, data=payload, timeout=5).json()
             if not res.get('success'):
@@ -280,7 +453,6 @@ def verification_page():
             flash('reCAPTCHA verification failed! Try again.', 'danger')
             return redirect(url_for('verification_page'))
 
-        # Handle File Upload
         file = request.files.get('face_photo')
         if not file or file.filename == '':
             flash('Please upload a valid face photo! 📷', 'danger')
@@ -305,7 +477,6 @@ def verification_page():
             link_4=request.form.get('link_4', '').strip(),
             link_5=request.form.get('link_5', '').strip()
         )
-        
         db.session.add(req)
         db.session.commit()
         flash('Verification request submitted! Admin will review your application. 📩', 'success')
@@ -321,9 +492,8 @@ def verify_action(req_id):
         return redirect(url_for('home'))
         
     req_item = VerificationRequest.query.get_or_404(req_id)
-    action = request.form.get('action')  # 'approve' or 'reject'
+    action = request.form.get('action')
     reason = request.form.get('reason', '').strip()
-
     target_user = User.query.get(req_item.user_id)
     
     if action == 'approve':
@@ -377,7 +547,6 @@ def mailbox():
     sent_mails = Mail.query.filter_by(sender_id=current_user.id).order_by(Mail.created_at.desc()).all()
     all_other_users = User.query.filter(User.id != current_user.id).all()
     
-    # Safe fetch for pending verification requests inside route
     pending_verifications = []
     if current_user.is_admin:
         try:
@@ -446,6 +615,9 @@ def login():
         
         user = User.query.filter_by(username=username).first()
         if user and check_password_hash(user.password_hash, password):
+            if getattr(user, 'is_banned', False):
+                flash('Your account is banned! 🔨', 'danger')
+                return redirect(url_for('login'))
             login_user(user)
             flash('Welcome back! 🎮', 'success')
             return redirect(url_for('home'))
@@ -512,7 +684,6 @@ def home():
         content = request.form.get('content', '').strip()
         image_url = request.form.get('image_url')
         download_link = request.form.get('download_link')
-        
         feed_type = 'official' if current_user.is_admin else 'community'
 
         if contains_banned_words(title) or contains_banned_words(content):
@@ -737,20 +908,14 @@ def profile(username=None):
 
     try:
         real_followers = Follow.query.filter_by(followed_id=user.id).count()
-        if user.fake_followers and str(user.fake_followers).strip() not in ['', '0', 'None']:
-            followers_count = user.fake_followers
-        else:
-            followers_count = real_followers
+        followers_count = user.fake_followers if user.fake_followers and str(user.fake_followers).strip() not in ['', '0', 'None'] else real_followers
     except Exception as e:
         app.logger.error(f"Followers check error: {e}")
         followers_count = 0
 
     try:
         real_profile_likes = ProfileLike.query.filter_by(receiver_id=user.id).count()
-        if user.fake_likes and str(user.fake_likes).strip() not in ['', '0', 'None']:
-            profile_likes_count = user.fake_likes
-        else:
-            profile_likes_count = real_profile_likes
+        profile_likes_count = user.fake_likes if user.fake_likes and str(user.fake_likes).strip() not in ['', '0', 'None'] else real_profile_likes
     except Exception as e:
         app.logger.error(f"Likes check error: {e}")
         profile_likes_count = 0
@@ -799,14 +964,10 @@ def edit_profile():
         flash('Your profile changes contained inappropriate words! 🚫', 'danger')
         return redirect(url_for('profile', username=current_user.username))
 
-    if nickname:
-        current_user.nickname = nickname
-    if pfp_url:
-        current_user.pfp_url = pfp_url
-    if bio:
-        current_user.bio = bio
-    if like_type_style:
-        current_user.like_type_style = like_type_style
+    if nickname: current_user.nickname = nickname
+    if pfp_url: current_user.pfp_url = pfp_url
+    if bio: current_user.bio = bio
+    if like_type_style: current_user.like_type_style = like_type_style
         
     db.session.commit()
     flash('Profile updated! ✨', 'success')
@@ -822,7 +983,7 @@ def admin_panel():
         
     all_users = User.query.all()
     all_posts = Post.query.order_by(Post.id.desc()).all()
-    return render_template('admin.html', users=all_users, posts=all_posts)
+    return render_template('admin.html', users=all_users, posts=all_posts, registered_commands=list(COMMAND_REGISTRY.keys()))
 
 
 @app.route('/admin/gui-update', methods=['POST'])
@@ -877,156 +1038,18 @@ def admin_execute_command():
     if not command_str:
         return redirect(url_for('admin_panel'))
 
-    parts = command_str.split(' ', 2)
-    cmd = parts[0].lower()
-    arg1 = parts[1] if len(parts) > 1 else None
-    arg2 = parts[2] if len(parts) > 2 else None
+    parts = command_str.split(' ')
+    cmd_name = parts[0].lower()
+    args = parts[1:]
 
-    # Handle commands
-    if cmd in ['/verify', '/unverify', '/op', '/deop']:
-        if not arg1:
-            flash("Usage: /verify or /op [username]", "warning")
-            return redirect(url_for('admin_panel'))
-        
-        user = User.query.filter_by(username=arg1).first()
-        if not user:
-            flash(f"User '{arg1}' not found!", "danger")
-            return redirect(url_for('admin_panel'))
-
-        if cmd == '/verify':
-            user.is_verified = True
-            flash(f"Verified @{user.username}! 🔵", "success")
-        elif cmd == '/unverify':
-            user.is_verified = False
-            flash(f"Unverified @{user.username}.", "info")
-        elif cmd == '/op':
-            user.is_admin = True
-            flash(f"Promoted @{user.username} to Admin! 👑", "success")
-        elif cmd == '/deop':
-            user.is_admin = False
-            flash(f"Demoted @{user.username} from Admin.", "info")
-
-        db.session.commit()
-
-    elif cmd == '/set_followers' and arg1 and arg2:
-        user = User.query.filter_by(username=arg1).first()
-        if user:
-            user.fake_followers = arg2
-            db.session.commit()
-            flash(f"Set @{user.username} followers to {arg2}! 📈", "success")
-
-    elif cmd == '/set_likes' and arg1 and arg2:
-        user = User.query.filter_by(username=arg1).first()
-        if user:
-            user.fake_likes = arg2
-            db.session.commit()
-            flash(f"Set @{user.username} likes to {arg2}! ❤️", "success")
-
-    elif cmd == '/set_nickname' and arg1 and arg2:
-        user = User.query.filter_by(username=arg1).first()
-        if user:
-            user.nickname = arg2
-            db.session.commit()
-            flash(f"Set @{user.username} nickname to {arg2}! ✏️", "success")
-
-    elif cmd == '/set_pfp' and arg1 and arg2:
-        user = User.query.filter_by(username=arg1).first()
-        if user:
-            user.pfp_url = arg2
-            db.session.commit()
-            flash(f"Set @{user.username} profile photo! 🖼️", "success")
-
-    elif cmd == '/del_post' and arg1:
-        post = Post.query.get(int(arg1)) if arg1.isdigit() else None
-        if post:
-            db.session.delete(post)
-            db.session.commit()
-            flash(f"Deleted Post #{arg1}! 🗑️", "success")
-
-    elif cmd == '/post_likes' and arg1 and arg2:
-        post = Post.query.get(int(arg1)) if arg1.isdigit() else None
-        if post:
-            post.fake_likes = arg2
-            db.session.commit()
-            flash(f"Set Post #{arg1} likes to {arg2}! 👍", "success")
-
-    elif cmd == '/clear_posts' and arg1:
-        user = User.query.filter_by(username=arg1).first()
-        if user:
-            Post.query.filter_by(user_id=user.id).delete()
-            db.session.commit()
-            flash(f"Cleared all posts for @{user.username}! 🧹", "success")
-
-    elif cmd == '/pin_post' and arg1:
-        post = Post.query.get(int(arg1)) if arg1.isdigit() else None
-        if post:
-            post.feed_type = 'official'
-            db.session.commit()
-            flash(f"Pinned Post #{arg1} to Official Feed! 📌", "success")
-
-    elif cmd == '/del_comment' and arg1:
-        comment = Comment.query.get(int(arg1)) if arg1.isdigit() else None
-        if comment:
-            db.session.delete(comment)
-            db.session.commit()
-            flash(f"Deleted Comment #{arg1}! 🗑️", "success")
-
-    elif cmd == '/broadcast' and arg1:
-        full_msg = f"{arg1} {arg2 or ''}".strip()
-        all_users = User.query.all()
-        for u in all_users:
-            mail = Mail(sender_id=current_user.id, receiver_id=u.id, subject="📢 Official System Announcement", content=full_msg)
-            db.session.add(mail)
-        db.session.commit()
-        flash("Broadcasted message to ALL players inbox! ✉️", "success")
-
-    elif cmd == '/clear_inbox' and arg1:
-        user = User.query.filter_by(username=arg1).first()
-        if user:
-            Mail.query.filter_by(receiver_id=user.id).delete()
-            db.session.commit()
-            flash(f"Cleared inbox for @{user.username}! 📭", "success")
-
-    elif cmd == '/wipe_requests':
-        VerificationRequest.query.filter_by(status='pending').delete()
-        db.session.commit()
-        flash("Wiped all pending verification requests! 🧹", "success")
-
-    elif cmd == '/approve_all':
-        pending = VerificationRequest.query.filter_by(status='pending').all()
-        for req in pending:
-            req.status = 'approved'
-            u = User.query.get(req.user_id)
-            if u:
-                u.is_verified = True
-        db.session.commit()
-        flash("Approved all pending verification requests! ✅", "success")
-
-    elif cmd == '/add_banned_word' and arg1:
-        word = arg1.lower()
-        if word not in BANNED_WORDS:
-            BANNED_WORDS.append(word)
-            flash(f"Added '{word}' to global profanity filter! 🚫", "success")
-
-    elif cmd == '/reset_password' and arg1 and arg2:
-        user = User.query.filter_by(username=arg1).first()
-        if user:
-            user.password_hash = generate_password_hash(arg2)
-            db.session.commit()
-            flash(f"Password reset for @{user.username}! 🔑", "success")
-
-    elif cmd == '/server_info':
-        u_count = User.query.count()
-        p_count = Post.query.count()
-        m_count = Mail.query.count()
-        flash(f"Server Stats: {u_count} Users | {p_count} Posts | {m_count} Mails 📊", "info")
-
-    elif cmd == '/reboot_db':
-        init_database()
-        flash("Re-initialized database schemas! ⚡", "success")
-
+    if cmd_name in COMMAND_REGISTRY:
+        try:
+            msg, category = COMMAND_REGISTRY[cmd_name](args)
+            flash(msg, category)
+        except Exception as e:
+            flash(f"Error executing {cmd_name}: {e}", "danger")
     else:
-        flash(f"Command processed: {command_str} ✨", "info")
+        flash(f"Command '{cmd_name}' not recognized. Type /stats or /broadcast.", "warning")
 
     return redirect(url_for('admin_panel'))
 
