@@ -1,86 +1,319 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 
 {% block content %}
-<div class="container py-4">
-    <h2 class="fw-bold text-info mb-4">&gt;_ Admin Control Panel 🛠️</h2>
+<style>
+    /* Command Console Theme */
+    .terminal-container {
+        max-width: 1100px;
+        margin: 25px auto;
+        padding: 0 15px;
+        font-family: 'Consolas', 'Courier New', monospace;
+    }
 
-    <!-- Manage Users & Fake Stats -->
-    <div class="card p-4 mb-4">
-        <h4 class="text-warning mb-3">👥 Player Management & Fake Stats</h4>
-        <div class="table-responsive">
-            <table class="table table-dark table-hover align-middle">
-                <thead>
-                    <tr>
-                        <th>User</th>
-                        <th>Role</th>
-                        <th>Followers Override</th>
-                        <th>Likes Override</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for u in users %}
-                    <tr>
-                        <td>
-                            <strong>{{ u.nickname }}</strong> <br>
-                            <small class="text-muted">@{{ u.username }}</small>
-                        </td>
-                        <td>
-                            {% if u.is_admin %}
-                                <span class="badge bg-danger">Admin 👑</span>
-                            {% else %}
-                                <span class="badge bg-secondary">Player</span>
-                            {% endif %}
-                        </td>
-                        <form action="{{ url_for('fake_stats', user_id=u.id) }}" method="POST">
-                            <td>
-                                <input type="text" name="fake_followers" class="form-control form-control-sm" value="{{ u.fake_followers or '' }}" placeholder="Real count">
-                            </td>
-                            <td>
-                                <input type="text" name="fake_likes" class="form-control form-control-sm" value="{{ u.fake_likes or '' }}" placeholder="Real count">
-                            </td>
-                            <td>
-                                <button type="submit" class="btn btn-sm btn-primary">Save 🪄</button>
-                            </td>
-                        </form>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+    .terminal-header {
+        background: #090d16;
+        border: 1px solid #1e293b;
+        border-bottom: 2px solid #10b981;
+        border-radius: 12px 12px 0 0;
+        padding: 16px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .terminal-window {
+        background: #0f172a;
+        border: 1px solid #1e293b;
+        border-radius: 0 0 12px 12px;
+        padding: 24px;
+        box-shadow: 0 15px 35px rgba(0,0,0,0.6);
+    }
+
+    /* Terminal Nav Tabs */
+    .cmd-tab-btn {
+        background: #1e293b;
+        color: #94a3b8;
+        border: 1px solid #334155;
+        padding: 8px 16px;
+        border-radius: 8px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-size: 0.85rem;
+    }
+
+    .cmd-tab-btn:hover, .cmd-tab-btn.active {
+        background: #10b981;
+        color: #0f172a;
+        border-color: #10b981;
+        box-shadow: 0 0 12px rgba(16, 185, 129, 0.4);
+    }
+
+    /* Terminal Prompt Box */
+    .terminal-prompt-box {
+        background: #020617;
+        border: 1px solid #334155;
+        border-radius: 10px;
+        padding: 16px;
+        margin-bottom: 24px;
+        box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+    }
+
+    .cmd-input {
+        background: #020617 !important;
+        border: 1px solid #334155 !important;
+        color: #38bdf8 !important;
+        font-family: 'Consolas', monospace;
+        padding: 8px 12px;
+        border-radius: 6px;
+        outline: none;
+    }
+
+    .cmd-input:focus {
+        border-color: #10b981 !important;
+        box-shadow: 0 0 8px rgba(16, 185, 129, 0.3) !important;
+    }
+
+    .cmd-btn {
+        background: #10b981;
+        color: #020617;
+        font-weight: bold;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: transform 0.1s;
+    }
+
+    .cmd-btn:hover {
+        transform: scale(1.02);
+        background: #34d399;
+    }
+
+    .cmd-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+        gap: 12px;
+    }
+
+    .cmd-card-item {
+        background: #090d16;
+        border: 1px solid #1e293b;
+        border-radius: 8px;
+        padding: 12px;
+        font-size: 0.8rem;
+    }
+
+    .cmd-card-item code {
+        color: #10b981;
+        font-weight: bold;
+        display: block;
+        margin-bottom: 4px;
+    }
+
+    .cmd-table {
+        width: 100%;
+        color: #cbd5e1;
+        border-collapse: collapse;
+        font-size: 0.9rem;
+    }
+
+    .cmd-table th {
+        background: #1e293b;
+        color: #34d399;
+        text-align: left;
+        padding: 10px;
+        border-bottom: 2px solid #334155;
+    }
+
+    .cmd-table td {
+        padding: 10px;
+        border-bottom: 1px solid #1e293b;
+    }
+
+    .status-dot {
+        height: 10px;
+        width: 10px;
+        background-color: #10b981;
+        border-radius: 50%;
+        display: inline-block;
+        box-shadow: 0 0 8px #10b981;
+    }
+</style>
+
+<div class="terminal-container">
+    
+    <!-- TERMINAL HEADER -->
+    <div class="terminal-header">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <span class="status-dot"></span>
+            <span style="color: #10b981; font-weight: bold; font-size: 1.1rem;">root@minecraft-myanmar:~# admin_console</span>
         </div>
+        <div style="color: #64748b; font-size: 0.8rem;">25 COMMANDS LOADED ⚡</div>
     </div>
 
-    <!-- Manage Posts & Fake Likes -->
-    <div class="card p-4">
-        <h4 class="text-warning mb-3">📝 Post Fake Likes Override</h4>
-        <div class="table-responsive">
-            <table class="table table-dark table-hover align-middle">
-                <thead>
-                    <tr>
-                        <th>Title</th>
-                        <th>Author</th>
-                        <th>Fake Likes Count</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for p in posts %}
-                    <tr>
-                        <td>{{ p.title }}</td>
-                        <td>@{{ p.user.username }}</td>
-                        <form action="{{ url_for('fake_post_likes', post_id=p.id) }}" method="POST">
-                            <td>
-                                <input type="text" name="fake_likes" class="form-control form-control-sm" value="{{ p.fake_likes or '' }}" placeholder="Real count">
-                            </td>
-                            <td>
-                                <button type="submit" class="btn btn-sm btn-primary">Save 🪄</button>
-                            </td>
-                        </form>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+    <!-- TERMINAL MAIN BODY -->
+    <div class="terminal-window">
+        
+        <!-- COMMAND PROMPT EXECUTION BOX -->
+        <div class="terminal-prompt-box">
+            <label style="color: #34d399; font-weight: bold; font-size: 0.85rem; display: block; margin-bottom: 8px;">
+                ⌨️ COMMAND EXECUTOR (Type commands like /verify or /fake_likes):
+            </label>
+            <form action="{{ url_for('admin_execute_command') }}" method="POST" style="display: flex; gap: 10px;">
+                <input type="text" name="command_str" placeholder="Type command... e.g. /verify username OR /broadcast Hello Myanmar!" class="cmd-input" style="flex: 1;" required autocomplete="off">
+                <button type="submit" class="cmd-btn">EXECUTE 🚀</button>
+            </form>
         </div>
+
+        <!-- COMMAND NAVIGATION TABS -->
+        <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid #1e293b; padding-bottom: 15px; flex-wrap: wrap;">
+            <button class="cmd-tab-btn active" onclick="switchTab('tab-cmdlist')">📜 25 Command List</button>
+            <button class="cmd-tab-btn" onclick="switchTab('tab-users')">👥 User Control (/users)</button>
+            <button class="cmd-tab-btn" onclick="switchTab('tab-posts')">📝 Content Manager (/posts)</button>
+        </div>
+
+        <!-- 1. 25 COMMAND REFERENCE GRID -->
+        <div id="tab-cmdlist" class="cmd-tab-content">
+            <h3 style="color: #38bdf8; font-size: 0.95rem; margin-bottom: 15px;">Available Server Commands:</h3>
+            
+            <div class="cmd-grid">
+                <!-- User Commands -->
+                <div class="cmd-card-item"><code>/verify [username]</code><span style="color: #94a3b8;">1. Instantly verify a user profile badge</span></div>
+                <div class="cmd-card-item"><code>/unverify [username]</code><span style="color: #94a3b8;">2. Remove verified status from user</span></div>
+                <div class="cmd-card-item"><code>/op [username]</code><span style="color: #94a3b8;">3. Promote user to Admin role</span></div>
+                <div class="cmd-card-item"><code>/deop [username]</code><span style="color: #94a3b8;">4. Demote user from Admin role</span></div>
+                <div class="cmd-card-item"><code>/ban [username]</code><span style="color: #94a3b8;">5. Lock out user account</span></div>
+                <div class="cmd-card-item"><code>/unban [username]</code><span style="color: #94a3b8;">6. Unlock banned user account</span></div>
+                <div class="cmd-card-item"><code>/set_followers [user] [num]</code><span style="color: #94a3b8;">7. Override user follower count</span></div>
+                <div class="cmd-card-item"><code>/set_likes [user] [num]</code><span style="color: #94a3b8;">8. Override profile like count</span></div>
+                <div class="cmd-card-item"><code>/set_nickname [user] [nick]</code><span style="color: #94a3b8;">9. Force edit user nickname</span></div>
+                <div class="cmd-card-item"><code>/set_pfp [user] [url]</code><span style="color: #94a3b8;">10. Force update user profile picture</span></div>
+
+                <!-- Content & Post Commands -->
+                <div class="cmd-card-item"><code>/del_post [post_id]</code><span style="color: #94a3b8;">11. Delete a specific post by ID</span></div>
+                <div class="cmd-card-item"><code>/post_likes [id] [num]</code><span style="color: #94a3b8;">12. Set fake likes for a post</span></div>
+                <div class="cmd-card-item"><code>/clear_posts [username]</code><span style="color: #94a3b8;">13. Wipe all posts from user</span></div>
+                <div class="cmd-card-item"><code>/pin_post [post_id]</code><span style="color: #94a3b8;">14. Move post to official feed</span></div>
+                <div class="cmd-card-item"><code>/del_comment [id]</code><span style="color: #94a3b8;">15. Delete inappropriate comment</span></div>
+
+                <!-- Mail & System Commands -->
+                <div class="cmd-card-item"><code>/broadcast [msg]</code><span style="color: #94a3b8;">16. Send system mail to ALL players</span></div>
+                <div class="cmd-card-item"><code>/clear_inbox [username]</code><span style="color: #94a3b8;">17. Wipe user's received inbox</span></div>
+                <div class="cmd-card-item"><code>/wipe_requests</code><span style="color: #94a3b8;">18. Clear pending verifications</span></div>
+                <div class="cmd-card-item"><code>/approve_all</code><span style="color: #94a3b8;">19. Mass approve pending requests</span></div>
+                <div class="cmd-card-item"><code>/system_msg [msg]</code><span style="color: #94a3b8;">20. Trigger pop-up alert for users</span></div>
+
+                <!-- Server Mode & Utility Commands -->
+                <div class="cmd-card-item"><code>/maintenance [on/off]</code><span style="color: #94a3b8;">21. Toggle site maintenance mode</span></div>
+                <div class="cmd-card-item"><code>/reset_password [user] [pw]</code><span style="color: #94a3b8;">22. Force reset user password</span></div>
+                <div class="cmd-card-item"><code>/add_banned_word [word]</code><span style="color: #94a3b8;">23. Add new banned filter word</span></div>
+                <div class="cmd-card-item"><code>/server_info</code><span style="color: #94a3b8;">24. Show database stats & counts</span></div>
+                <div class="cmd-card-item"><code>/reboot_db</code><span style="color: #94a3b8;">25. Refresh database schema tables</span></div>
+            </div>
+        </div>
+
+        <!-- 2. USER CONTROL TAB -->
+        <div id="tab-users" class="cmd-tab-content" style="display: none;">
+            <h3 style="color: #38bdf8; font-size: 0.95rem; margin-bottom: 15px;">Registered Users:</h3>
+            
+            <div style="overflow-x: auto;">
+                <table class="cmd-table">
+                    <thead>
+                        <tr>
+                            <th>UID</th>
+                            <th>Username</th>
+                            <th>Role</th>
+                            <th>Verified</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for u in users %}
+                        <tr>
+                            <td>#{{ u.id }}</td>
+                            <td>
+                                <a href="{{ url_for('profile', username=u.username) }}" style="color: #38bdf8; text-decoration: none;">
+                                    @{{ u.username }}
+                                </a>
+                            </td>
+                            <td>
+                                {% if u.is_admin %}
+                                    <span style="color: #fbbf24; font-weight: bold;">[ADMIN]</span>
+                                {% else %}
+                                    <span style="color: #94a3b8;">[MEMBER]</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if u.is_verified %}
+                                    <span style="color: #38bdf8;">✓ YES</span>
+                                {% else %}
+                                    <span style="color: #64748b;">✗ NO</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <form action="{{ url_for('fake_stats', user_id=u.id) }}" method="POST" style="display: flex; gap: 8px;">
+                                    <input type="text" name="fake_followers" value="{{ u.fake_followers or '' }}" placeholder="Followers" class="cmd-input" style="width: 100px;">
+                                    <input type="text" name="fake_likes" value="{{ u.fake_likes or '' }}" placeholder="Likes" class="cmd-input" style="width: 100px;">
+                                    <button type="submit" class="cmd-btn">RUN 🚀</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 3. CONTENT MANAGER TAB -->
+        <div id="tab-posts" class="cmd-tab-content" style="display: none;">
+            <h3 style="color: #38bdf8; font-size: 0.95rem; margin-bottom: 15px;">Published Posts:</h3>
+            
+            <div style="overflow-x: auto;">
+                <table class="cmd-table">
+                    <thead>
+                        <tr>
+                            <th>PID</th>
+                            <th>Author</th>
+                            <th>Title</th>
+                            <th>Feed</th>
+                            <th>Override Post Likes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for post in posts %}
+                        <tr>
+                            <td>#{{ post.id }}</td>
+                            <td style="color: #38bdf8;">@{{ post.user.username }}</td>
+                            <td style="color: white;">{{ post.title }}</td>
+                            <td>
+                                <span style="background: #1e293b; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; color: #a7f3d0;">
+                                    {{ post.feed_type }}
+                                </span>
+                            </td>
+                            <td>
+                                <form action="{{ url_for('fake_post_likes', post_id=post.id) }}" method="POST" style="display: flex; gap: 8px;">
+                                    <input type="text" name="fake_likes" value="{{ post.fake_likes or '' }}" placeholder="Fake Likes" class="cmd-input" style="width: 120px;">
+                                    <button type="submit" class="cmd-btn">SET 👍</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
     </div>
 </div>
+
+<script>
+    function switchTab(tabId) {
+        document.querySelectorAll('.cmd-tab-content').forEach(el => el.style.display = 'none');
+        document.querySelectorAll('.cmd-tab-btn').forEach(btn => btn.classList.remove('active'));
+
+        document.getElementById(tabId).style.display = 'block';
+        event.currentTarget.classList.add('active');
+    }
+</script>
 {% endblock %}
