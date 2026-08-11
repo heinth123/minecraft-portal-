@@ -245,6 +245,78 @@ def init_database():
 init_database()
 
 # ----------------- ROUTES -----------------
+# 1. User Verification Form & Submission
+@app.route('/settings/verification', methods=['GET', 'POST'])
+@login_required
+def verification_page():
+    if current_user.is_verified:
+        flash("You are already verified! 🔵", "info")
+        return redirect(url_for('profile', username=current_user.username))
+        
+    if request.method == 'POST':
+        # Step 2: reCAPTCHA check
+        recaptcha_response = request.form.get('g-recaptcha-response')
+        verify_url = "https://www.google.com/recaptcha/api/siteverify"
+        payload = {'secret': RECAPTCHA_SECRET_KEY, 'response': recaptcha_response}
+        
+        try:
+            res = requests.post(verify_url, data=payload, timeout=5).json()
+            if not res.get('success'):
+                flash('Please complete the "I am not a robot" test! 🤖🚫', 'danger')
+                return redirect(url_for('verification_page'))
+        except Exception:
+            flash('reCAPTCHA verification failed! Try again.', 'danger')
+            return redirect(url_for('verification_page'))
+
+        # Create new request
+        req = VerificationRequest(
+            user_id=current_user.id,
+            reason_choice=request.form.get('reason_choice'),
+            reason_other=request.form.get('reason_other', '').strip(),
+            admin_known=request.form.get('admin_known'),
+            real_name=request.form.get('real_name', '').strip(),
+            nickname=request.form.get('nickname', '').strip(),
+            age=int(request.form.get('age', 0)),
+            face_photo_url=request.form.get('face_photo_url', '').strip(),
+            link_1=request.form.get('link_1', '').strip(),
+            link_2=request.form.get('link_2', '').strip(),
+            link_3=request.form.get('link_3', '').strip(),
+            link_4=request.form.get('link_4', '').strip(),
+            link_5=request.form.get('link_5', '').strip()
+        )
+        
+        db.session.add(req)
+        db.session.commit()
+        flash('Verification request submitted! Admin will review your application. 📩', 'success')
+        return redirect(url_for('profile', username=current_user.username))
+
+    return render_template('verification.html')
+
+# 2. Admin Review Route inside Mailbox
+@app.route('/admin/verify_action/<int:req_id>', methods=['POST'])
+@login_required
+def verify_action(req_id):
+    if not current_user.is_admin:
+        return redirect(url_for('home'))
+        
+    req_item = VerificationRequest.query.get_or_404(req_id)
+    action = request.form.get('action')  # 'approve' or 'reject'
+    reason = request.form.get('reason', '').strip()
+
+    target_user = User.query.get(req_item.user_id)
+    
+    if action == 'approve':
+        req_item.status = 'approved'
+        target_user.is_verified = True
+        flash(f"Approved verification for {target_user.username}! ✅", "success")
+    elif action == 'reject':
+        req_item.status = 'rejected'
+        req_item.reject_reason = reason
+        target_user.is_verified = False
+        flash(f"Rejected verification for {target_user.username}. ❌", "info")
+
+    db.session.commit()
+    return redirect(request.referrer or url_for('mailbox'))
 
 @app.route('/call/<int:user_id>')
 @login_required
