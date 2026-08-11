@@ -1,75 +1,114 @@
 {% extends "base.html" %}
 
-{% block title %}Video Call with {{ target_user.nickname }}{% endblock %}
-
 {% block content %}
-<!-- Include PeerJS Library -->
-<script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+<style>
+    .call-container {
+        max-width: 600px;
+        margin: 40px auto;
+        padding: 30px;
+        background: #1e293b;
+        border: 1px solid #334155;
+        border-radius: 20px;
+        text-align: center;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        color: white;
+    }
 
-<div style="max-width: 900px; margin: 30px auto; padding: 20px; text-align: center; color: white;">
-    <h2 style="color: #38bdf8;">📞 Calling {{ target_user.nickname }}</h2>
-    <p id="call-status" style="color: #94a3b8;">Connecting camera and microphone...</p>
+    .user-avatar-call {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 4px solid #10b981;
+        margin-bottom: 20px;
+        animation: pulse-ring 1.5s infinite;
+    }
 
-    <!-- Video Grid -->
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 20px;">
-        <!-- Local Camera Feed -->
-        <div style="background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 10px;">
-            <p style="margin-bottom: 8px; color: #cbd5e1;">You (Local)</p>
-            <video id="localVideo" autoplay muted style="width: 100%; height: 240px; background: #0f172a; border-radius: 8px; object-fit: cover;"></video>
-        </div>
+    @keyframes pulse-ring {
+        0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5); }
+        70% { box-shadow: 0 0 0 20px rgba(16, 185, 129, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
 
-        <!-- Remote Camera Feed -->
-        <div style="background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 10px;">
-            <p style="margin-bottom: 8px; color: #38bdf8;">{{ target_user.nickname }}</p>
-            <video id="remoteVideo" autoplay style="width: 100%; height: 240px; background: #0f172a; border-radius: 8px; object-fit: cover;"></video>
-        </div>
-    </div>
+    .btn-call-action {
+        width: 65px;
+        height: 65px;
+        border-radius: 50%;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: transform 0.2s;
+    }
 
-    <!-- Call Controls -->
-    <div style="margin-top: 25px;">
-        <a href="{{ url_for('profile', username=target_user.username) }}" style="background: #ef4444; color: white; border: none; padding: 12px 28px; border-radius: 25px; font-weight: bold; text-decoration: none; display: inline-block;">
-            🚫 End Call
-        </a>
+    .btn-call-action:hover {
+        transform: scale(1.1);
+    }
+
+    .btn-accept { background: #10b981; color: white; }
+    .btn-decline { background: #ef4444; color: white; }
+</style>
+
+<div class="call-container">
+    <!-- Ringtone Audio element -->
+    <audio id="ringtone" loop prefetch="auto">
+        <source src="{{ url_for('static', filename='audio/ringtone.mp3') }}" type="audio/mpeg">
+        <!-- Fallback free sound link if local file isn't uploaded yet -->
+        <source src="https://assets.mixkit.co/active_storage/sfx/1359/1359-preview.mp3" type="audio/mpeg">
+    </audio>
+
+    <img src="{{ target_user.safe_pfp }}" class="user-avatar-call">
+    
+    <h2 style="margin-bottom: 5px; color: #f8fafc;">{{ target_user.nickname }}</h2>
+    <p style="color: #94a3b8; font-size: 0.95rem;" id="callStatus">Calling @{{ target_user.username }}... 🔔</p>
+
+    <!-- Action Buttons -->
+    <div style="display: flex; justify-content: center; gap: 30px; margin-top: 30px;">
+        <button class="btn-call-action btn-accept" id="acceptBtn" onclick="answerCall()" title="Answer Call">
+            📞
+        </button>
+        <button class="btn-call-action btn-decline" onclick="endCall()" title="Decline Call">
+            ❌
+        </button>
     </div>
 </div>
 
 <script>
-    const currentUserId = "{{ current_user.id }}";
-    const targetUserId = "{{ target_user.id }}";
+    const ringtone = document.getElementById('ringtone');
+    const statusText = document.getElementById('callStatus');
 
-    // Initialize PeerJS with unique ID
-    const peer = new Peer('minecraft-user-' + currentUserId);
-
-    const localVideo = document.getElementById('localVideo');
-    const remoteVideo = document.getElementById('remoteVideo');
-    const statusText = document.getElementById('call-status');
-
-    // Get media stream (Camera & Mic)
-    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-        .then(stream => {
-            localVideo.srcObject = stream;
-            statusText.innerText = "Camera ready! Calling {{ target_user.nickname }}...";
-
-            // Call the target user
-            const call = peer.call('minecraft-user-' + targetUserId, stream);
-            
-            call.on('stream', remoteStream => {
-                remoteVideo.srcObject = remoteStream;
-                statusText.innerText = "Connected! 🟢";
-            });
-
-            // Answer incoming call
-            peer.on('call', incomingCall => {
-                incomingCall.answer(stream);
-                incomingCall.on('stream', remoteStream => {
-                    remoteVideo.srcObject = remoteStream;
-                    statusText.innerText = "Connected! 🟢";
-                });
-            });
-        })
-        .catch(err => {
-            console.error("Failed to get local stream", err);
-            statusText.innerText = "⚠️ Please allow camera & microphone permissions!";
+    // Auto-play ringtone when the page loads
+    window.addEventListener('DOMContentLoaded', () => {
+        ringtone.play().catch(error => {
+            // Browsers block autoplay until the user clicks somewhere on the page
+            console.log("Autoplay waiting for user interaction:", error);
+            statusText.innerHTML = "Click anywhere on the screen to start call ringtone... 🔔";
+            document.body.addEventListener('click', () => {
+                ringtone.play();
+            }, { once: true });
         });
+    });
+
+    function answerCall() {
+        // Stop the ringtone sound
+        ringtone.pause();
+        ringtone.currentTime = 0;
+
+        // Hide accept button & update status
+        document.getElementById('acceptBtn').style.display = 'none';
+        statusText.style.color = '#10b981';
+        statusText.innerHTML = 'Connected 🟢 (00:01)';
+
+        // WebRTC or video stream initializations can be placed here!
+    }
+
+    function endCall() {
+        // Stop sound and redirect back
+        ringtone.pause();
+        ringtone.currentTime = 0;
+        window.location.href = "{{ url_for('chat') }}";
+    }
 </script>
 {% endblock %}
