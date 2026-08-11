@@ -217,6 +217,7 @@ def load_user(user_id):
 def init_database():
     """Safely initialize tables, alter schema, and seed admin users."""
     with app.app_context():
+        # Force table creation
         db.create_all()
         
         try:
@@ -376,10 +377,19 @@ def mailbox():
     sent_mails = Mail.query.filter_by(sender_id=current_user.id).order_by(Mail.created_at.desc()).all()
     all_other_users = User.query.filter(User.id != current_user.id).all()
     
+    # Safe fetch for pending verification requests inside route
+    pending_verifications = []
+    if current_user.is_admin:
+        try:
+            pending_verifications = VerificationRequest.query.filter_by(status='pending').all()
+        except Exception as e:
+            app.logger.error(f"Verification query error: {e}")
+
     return render_template('mailbox.html', 
                            received_mails=received_mails, 
                            sent_mails=sent_mails, 
-                           all_users=all_other_users)
+                           all_users=all_other_users,
+                           pending_verifications=pending_verifications)
 
 
 @app.route('/chat')
