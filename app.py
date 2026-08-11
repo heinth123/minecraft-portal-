@@ -1,5 +1,6 @@
 import os
 import re
+import requests
 from datetime import datetime, timezone
 from urllib.parse import unquote
 from flask import Flask, render_template, request, redirect, url_for, flash
@@ -9,6 +10,11 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "minecraft_myanmar_super_secret_key_2026")
+
+# reCAPTCHA Configuration
+RECAPTCHA_SITE_KEY = os.environ.get("RECAPTCHA_SITE_KEY", "6LdwE4AtAAAAAGg9QvOg0eKkoFNu9slL2pbL3hgH")
+RECAPTCHA_SECRET_KEY = os.environ.get("RECAPTCHA_SECRET_KEY", "6LdwE4AtAAAAAI5fRw2ikR6LlRKdwAF4HbrQQUim")
+app.config['RECAPTCHA_SITE_KEY'] = RECAPTCHA_SITE_KEY
 
 # Database Configuration
 db_url = os.environ.get("DATABASE_URL", "sqlite:///minecraft_social.db")
@@ -41,15 +47,13 @@ def contains_banned_words(text):
     if clean_text.strip().replace('.', '') == '' or clean_text.strip().replace('/', '') == '':
         return True
 
-    # Check for whole banned words to avoid false positives (e.g. speed, sleep, addition)
+    # Check for whole banned words to avoid false positives
     for word in BANNED_WORDS:
         pattern = r'\b' + re.escape(word) + r'\b'
         if re.search(pattern, clean_text):
             return True
             
     return False
-
-# ----------------- DATABASE MODELS -----------------
 
 # ----------------- DATABASE MODELS -----------------
 
@@ -61,7 +65,7 @@ class User(UserMixin, db.Model):
     pfp_url = db.Column(db.String(300), default="https://placehold.co/150/1e293b/22c55e?text=Steve")
     bio = db.Column(db.String(200), default="Minecraft Myanmar Player ⛏️")
     is_admin = db.Column(db.Boolean, default=False)
-    is_verified = db.Column(db.Boolean, default=False)  # 👈 Added for verified checkmark!
+    is_verified = db.Column(db.Boolean, default=False)
     
     fake_followers = db.Column(db.String(20), nullable=True, default="0")
     fake_likes = db.Column(db.String(20), nullable=True, default="0")
@@ -76,7 +80,6 @@ class User(UserMixin, db.Model):
         return self.like_type_style or "❤️ Classic Red"
 
 
-# 🆕 New Model for Verification Submissions
 class VerificationRequest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -106,23 +109,13 @@ class VerificationRequest(db.Model):
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     user = db.relationship('User', backref='verification_requests')
-    
-    fake_followers = db.Column(db.String(20), nullable=True, default="0")
-    fake_likes = db.Column(db.String(20), nullable=True, default="0")
-    like_type_style = db.Column(db.String(50), nullable=True, default="❤️ Classic Red")
 
-    @property
-    def safe_pfp(self):
-        return self.pfp_url or "https://placehold.co/150/1e293b/22c55e?text=Steve"
-
-    @property
-    def safe_like_style(self):
-        return self.like_type_style or "❤️ Classic Red"
 
 class Follow(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     follower_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     followed_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+
 
 class Friendship(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -134,11 +127,13 @@ class Friendship(db.Model):
     sender = db.relationship('User', foreign_keys=[sender_id], backref='sent_friend_requests')
     receiver = db.relationship('User', foreign_keys=[receiver_id], backref='received_friend_requests')
 
+
 class ProfileLike(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     giver_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     receiver_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     liked_date = db.Column(db.String(10), nullable=False)
+
 
 class Post(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -153,10 +148,12 @@ class Post(db.Model):
     user = db.relationship('User', backref='posts')
     fake_likes = db.Column(db.String(20), nullable=True)
 
+
 class PostLike(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     post_id = db.Column(db.Integer, db.ForeignKey('post.id'), nullable=False)
+
 
 class Comment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -167,6 +164,7 @@ class Comment(db.Model):
     user = db.relationship('User', backref='comments')
     post = db.relationship('Post', backref='comments')
 
+
 class DirectMessage(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -175,6 +173,7 @@ class DirectMessage(db.Model):
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     sender = db.relationship('User', foreign_keys=[sender_id])
     receiver = db.relationship('User', foreign_keys=[receiver_id])
+
 
 class Mail(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -187,10 +186,12 @@ class Mail(db.Model):
     sender = db.relationship('User', foreign_keys=[sender_id], backref='sent_mails')
     receiver = db.relationship('User', foreign_keys=[receiver_id], backref='received_mails')
 
+
 class GroupChat(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     creator_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+
 
 class GroupMessage(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -199,6 +200,7 @@ class GroupMessage(db.Model):
     content = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     sender = db.relationship('User')
+
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -223,6 +225,8 @@ def init_database():
                     conn.execute(text('ALTER TABLE "user" ADD COLUMN fake_likes VARCHAR(20) DEFAULT \'0\';'))
                 if 'like_type_style' not in columns:
                     conn.execute(text('ALTER TABLE "user" ADD COLUMN like_type_style VARCHAR(50) DEFAULT \'❤️ Classic Red\';'))
+                if 'is_verified' not in columns:
+                    conn.execute(text('ALTER TABLE "user" ADD COLUMN is_verified BOOLEAN DEFAULT FALSE;'))
         except Exception as e:
             app.logger.warning(f"Schema check notice: {e}")
 
@@ -235,17 +239,18 @@ def init_database():
         for un, pw in admins:
             u = User.query.filter_by(username=un).first()
             if not u:
-                u = User(username=un, nickname=un, password_hash=generate_password_hash(pw), is_admin=True)
+                u = User(username=un, nickname=un, password_hash=generate_password_hash(pw), is_admin=True, is_verified=True)
                 db.session.add(u)
             else:
                 u.is_admin = True
+                u.is_verified = True
 
         db.session.commit()
 
 init_database()
 
 # ----------------- ROUTES -----------------
-# 1. User Verification Form & Submission
+
 @app.route('/settings/verification', methods=['GET', 'POST'])
 @login_required
 def verification_page():
@@ -254,7 +259,7 @@ def verification_page():
         return redirect(url_for('profile', username=current_user.username))
         
     if request.method == 'POST':
-        # Step 2: reCAPTCHA check
+        # reCAPTCHA check
         recaptcha_response = request.form.get('g-recaptcha-response')
         verify_url = "https://www.google.com/recaptcha/api/siteverify"
         payload = {'secret': RECAPTCHA_SECRET_KEY, 'response': recaptcha_response}
@@ -268,7 +273,6 @@ def verification_page():
             flash('reCAPTCHA verification failed! Try again.', 'danger')
             return redirect(url_for('verification_page'))
 
-        # Create new request
         req = VerificationRequest(
             user_id=current_user.id,
             reason_choice=request.form.get('reason_choice'),
@@ -292,7 +296,7 @@ def verification_page():
 
     return render_template('verification.html')
 
-# 2. Admin Review Route inside Mailbox
+
 @app.route('/admin/verify_action/<int:req_id>', methods=['POST'])
 @login_required
 def verify_action(req_id):
@@ -318,11 +322,13 @@ def verify_action(req_id):
     db.session.commit()
     return redirect(request.referrer or url_for('mailbox'))
 
+
 @app.route('/call/<int:user_id>')
 @login_required
 def video_call(user_id):
     target_user = User.query.get_or_404(user_id)
     return render_template('video_call.html', target_user=target_user)
+
 
 @app.route('/mailbox', methods=['GET', 'POST'])
 @login_required
@@ -350,12 +356,8 @@ def mailbox():
         else:
             flash('Please fill out all fields to send mail!', 'danger')
 
-    received_mails = Mail.query.filter_by(receiver_id=current_user.id)\
-        .order_by(Mail.created_at.desc()).all()
-    
-    sent_mails = Mail.query.filter_by(sender_id=current_user.id)\
-        .order_by(Mail.created_at.desc()).all()
-
+    received_mails = Mail.query.filter_by(receiver_id=current_user.id).order_by(Mail.created_at.desc()).all()
+    sent_mails = Mail.query.filter_by(sender_id=current_user.id).order_by(Mail.created_at.desc()).all()
     all_other_users = User.query.filter(User.id != current_user.id).all()
     
     return render_template('mailbox.html', 
@@ -363,11 +365,11 @@ def mailbox():
                            sent_mails=sent_mails, 
                            all_users=all_other_users)
 
+
 @app.route('/chat')
 @login_required
 def chat():
     all_users = User.query.filter(User.id != current_user.id).all()
-    
     all_dms = DirectMessage.query.filter(
         (DirectMessage.sender_id == current_user.id) | (DirectMessage.receiver_id == current_user.id)
     ).order_by(DirectMessage.created_at.desc()).all()
@@ -379,8 +381,8 @@ def chat():
             chat_partner_ids.append(partner_id)
 
     recent_chats = User.query.filter(User.id.in_(chat_partner_ids)).all() if chat_partner_ids else []
-
     return render_template('chat.html', recent_chats=recent_chats, all_users=all_users)
+
 
 @app.route('/chat/dm/<int:receiver_id>', methods=['GET', 'POST'])
 @login_required
@@ -406,6 +408,7 @@ def dm(receiver_id):
     
     return render_template('dm.html', receiver=receiver, messages=messages)
 
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
@@ -424,6 +427,7 @@ def login():
             flash('Invalid username or password!', 'danger')
             
     return render_template('login.html')
+
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -466,11 +470,13 @@ def register():
         
     return render_template('register.html')
 
+
 @app.route('/logout')
 @login_required
 def logout():
     logout_user()
     return redirect(url_for('login'))
+
 
 @app.route('/', methods=['GET', 'POST'])
 @login_required
@@ -481,7 +487,6 @@ def home():
         image_url = request.form.get('image_url')
         download_link = request.form.get('download_link')
         
-        # Default to 'official' if admin posting from home, else 'community'
         feed_type = 'official' if current_user.is_admin else 'community'
 
         if contains_banned_words(title) or contains_banned_words(content):
@@ -502,15 +507,16 @@ def home():
             flash('Published successfully! ✨', 'success')
             return redirect(url_for('home'))
 
-    # Display posts (show official or all posts depending on your design)
     posts = Post.query.filter_by(feed_type='official').order_by(Post.id.desc()).all()
     return render_template('index.html', posts=posts, feed_title="🏠 Official Announcements & Addons")
-    
+
+
 @app.route('/community')
 @login_required
 def community():
     posts = Post.query.filter_by(feed_type='community').order_by(Post.id.desc()).all()
     return render_template('community.html', posts=posts)
+
 
 @app.route('/create_post', methods=['POST'])
 @login_required
@@ -543,6 +549,7 @@ def create_post():
         
     return redirect(url_for('home' if feed_type == 'official' else 'community'))
 
+
 @app.route('/friends')
 @login_required
 def friends_list():
@@ -556,6 +563,7 @@ def friends_list():
     all_users = User.query.filter(User.id != current_user.id).all()
 
     return render_template('friends.html', friends=friends, pending_requests=pending_requests, all_users=all_users)
+
 
 @app.route('/search_friends', methods=['GET'])
 @login_required
@@ -584,6 +592,7 @@ def search_friends():
 
     return render_template('search_friends.html', results=search_results, query=query, recommended=recommended_users)
 
+
 @app.route('/friend/send/<int:user_id>', methods=['POST'])
 @login_required
 def send_friend_request(user_id):
@@ -601,6 +610,7 @@ def send_friend_request(user_id):
 
     return redirect(request.referrer or url_for('friends_list'))
 
+
 @app.route('/friend/accept/<int:request_id>', methods=['POST'])
 @login_required
 def accept_friend_request(request_id):
@@ -610,6 +620,7 @@ def accept_friend_request(request_id):
         db.session.commit()
         flash('Friend request accepted! 🎉', 'success')
     return redirect(request.referrer or url_for('friends_list'))
+
 
 @app.route('/friend/remove/<int:user_id>', methods=['POST'])
 @login_required
@@ -626,6 +637,7 @@ def remove_friend(user_id):
 
     return redirect(request.referrer or url_for('friends_list'))
 
+
 @app.route('/post/<int:post_id>/like', methods=['POST'])
 @login_required
 def like_post(post_id):
@@ -635,6 +647,7 @@ def like_post(post_id):
         db.session.add(new_like)
         db.session.commit()
     return redirect(request.referrer or url_for('home'))
+
 
 @app.route('/post/<int:post_id>/comment', methods=['POST'])
 @login_required
@@ -650,6 +663,7 @@ def add_comment(post_id):
         db.session.commit()
     return redirect(request.referrer or url_for('home'))
 
+
 @app.route('/user/<int:user_id>/follow', methods=['POST'])
 @login_required
 def follow_user(user_id):
@@ -662,6 +676,7 @@ def follow_user(user_id):
             db.session.add(new_follow)
         db.session.commit()
     return redirect(request.referrer or url_for('home'))
+
 
 @app.route('/user/<int:user_id>/profile_like', methods=['POST'])
 @login_required
@@ -679,6 +694,7 @@ def profile_like(user_id):
         
     return redirect(request.referrer or url_for('home'))
 
+
 @app.route('/profile/')
 @app.route('/profile/<path:username>')
 @login_required
@@ -693,7 +709,6 @@ def profile(username=None):
         flash(f"User '{decoded_username}' not found!", "danger")
         return redirect(url_for('home'))
 
-    # Calculate followers safely
     try:
         real_followers = Follow.query.filter_by(followed_id=user.id).count()
         if user.fake_followers and str(user.fake_followers).strip() not in ['', '0', 'None']:
@@ -704,7 +719,6 @@ def profile(username=None):
         app.logger.error(f"Followers check error: {e}")
         followers_count = 0
 
-    # Calculate likes safely
     try:
         real_profile_likes = ProfileLike.query.filter_by(receiver_id=user.id).count()
         if user.fake_likes and str(user.fake_likes).strip() not in ['', '0', 'None']:
@@ -715,7 +729,6 @@ def profile(username=None):
         app.logger.error(f"Likes check error: {e}")
         profile_likes_count = 0
 
-    # Safe checks for following, posts, friendship
     is_following = False
     try:
         is_following = Follow.query.filter_by(follower_id=current_user.id, followed_id=user.id).first() is not None
@@ -747,6 +760,7 @@ def profile(username=None):
         friendship=friendship
     )
 
+
 @app.route('/edit_profile', methods=['POST'])
 @login_required
 def edit_profile():
@@ -772,6 +786,7 @@ def edit_profile():
     flash('Profile updated! ✨', 'success')
     return redirect(url_for('profile', username=current_user.username))
 
+
 @app.route('/admin')
 @login_required
 def admin_panel():
@@ -783,6 +798,7 @@ def admin_panel():
     all_posts = Post.query.order_by(Post.id.desc()).all()
     return render_template('admin.html', users=all_users, posts=all_posts)
 
+
 @app.route('/admin/gui-update', methods=['POST'])
 @login_required
 def admin_gui_update():
@@ -793,6 +809,7 @@ def admin_gui_update():
     setting_name = request.form.get('setting_name')
     flash(f"Updated GUI setting {setting_name}! ✨", "success")
     return redirect(request.referrer or url_for('admin_panel'))
+
 
 @app.route('/admin/fake_stats/<int:user_id>', methods=['POST'])
 @login_required
@@ -808,6 +825,7 @@ def fake_stats(user_id):
     flash('Fake stats applied! 🪄', 'success')
     return redirect(request.referrer or url_for('admin_panel'))
 
+
 @app.route('/admin/fake_post_likes/<int:post_id>', methods=['POST'])
 @login_required
 def fake_post_likes(post_id):
@@ -820,6 +838,7 @@ def fake_post_likes(post_id):
     
     flash('Post fake likes applied! 🪄', 'success')
     return redirect(request.referrer or url_for('admin_panel'))
+
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
