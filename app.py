@@ -12,6 +12,11 @@ from werkzeug.utils import secure_filename
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "minecraft_myanmar_super_secret_key_2026")
 
+# ----------------- GROQ AI CONFIGURATION -----------------
+# Option 1 (Recommended): Set GROQ_API_KEY in your Render environment variables.
+# Option 2: Paste your Groq API key directly into the quotes below (e.g. "gsk_...").
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY") or "YOUR_GROQ_API_KEY_HERE"
+
 # File Upload Configuration
 UPLOAD_FOLDER = os.path.join(app.root_path, 'static', 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -592,6 +597,50 @@ def cmd_clear_friends(args):
 
 
 # ----------------- ROUTES -----------------
+
+@app.route('/chatgpt')
+@login_required
+def ai_chat():
+    return render_template('ai_chat.html')
+
+
+@app.route('/ask_ai', methods=['POST'])
+@login_required
+def ask_ai():
+    prompt = request.form.get('prompt', '').strip()
+    
+    if not prompt:
+        return {"reply": "Please enter a message! 🤖"}
+
+    if not GROQ_API_KEY or GROQ_API_KEY == "YOUR_GROQ_API_KEY_HERE":
+        return {"reply": "Groq API Key is missing! Please set GROQ_API_KEY in Render settings or inside app.py ⚠️"}
+
+    endpoint = "https://api.groq.com/openai/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {GROQ_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    
+    payload = {
+        "model": "llama-3.3-70b-versatile",
+        "messages": [
+            {"role": "system", "content": "You are ChatGPT, a super friendly AI assistant inside the Minecraft Myanmar web app!"},
+            {"role": "user", "content": prompt}
+        ]
+    }
+
+    try:
+        response = requests.post(endpoint, json=payload, headers=headers, timeout=10)
+        data = response.json()
+        
+        if "choices" in data and len(data["choices"]) > 0:
+            reply_text = data["choices"][0]["message"]["content"]
+            return {"reply": reply_text}
+        else:
+            return {"reply": "AI response error. Please check your Groq API key or quota! ⚠️"}
+    except Exception as e:
+        return {"reply": f"Failed to connect to Groq API: {e}"}
+
 
 @app.route('/settings/verification', methods=['GET', 'POST'])
 @login_required
