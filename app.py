@@ -7,9 +7,15 @@ from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "minecraft_myanmar_super_secret_key_2026")
+
+# File Upload Configuration
+UPLOAD_FOLDER = os.path.join(app.root_path, 'static', 'uploads')
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 # reCAPTCHA Configuration
 RECAPTCHA_SITE_KEY = os.environ.get("RECAPTCHA_SITE_KEY", "6LdwE4AtAAAAAGg9QvOg0eKkoFNu9slL2pbL3hgH")
@@ -273,6 +279,16 @@ def verification_page():
             flash('reCAPTCHA verification failed! Try again.', 'danger')
             return redirect(url_for('verification_page'))
 
+        # Handle File Upload
+        file = request.files.get('face_photo')
+        if not file or file.filename == '':
+            flash('Please upload a valid face photo! 📷', 'danger')
+            return redirect(url_for('verification_page'))
+
+        filename = secure_filename(f"user_{current_user.id}_{int(datetime.now().timestamp())}_{file.filename}")
+        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        face_photo_url = url_for('static', filename=f'uploads/{filename}')
+
         req = VerificationRequest(
             user_id=current_user.id,
             reason_choice=request.form.get('reason_choice'),
@@ -281,7 +297,7 @@ def verification_page():
             real_name=request.form.get('real_name', '').strip(),
             nickname=request.form.get('nickname', '').strip(),
             age=int(request.form.get('age', 0)),
-            face_photo_url=request.form.get('face_photo_url', '').strip(),
+            face_photo_url=face_photo_url,
             link_1=request.form.get('link_1', '').strip(),
             link_2=request.form.get('link_2', '').strip(),
             link_3=request.form.get('link_3', '').strip(),
