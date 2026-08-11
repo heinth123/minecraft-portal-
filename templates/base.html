@@ -68,6 +68,15 @@
                         <span class="whitespace-nowrap font-medium text-sm hidden group-hover:inline group-[.expanded]:inline">Mail Box</span>
                     </a>
 
+                    <!-- ChatGPT AI Assistant -->
+                    <a href="{{ url_for('ai_chat') }}" class="flex items-center gap-4 p-3 rounded-xl hover:bg-emerald-600/20 hover:text-emerald-400 text-slate-300 transition group/item" title="ChatGPT">
+                        <svg class="w-6 h-6 text-emerald-400 shrink-0" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M22.2819 9.8211a5.9847 5.9847 0 0 0-.5157-4.9108 6.0462 6.0462 0 0 0-6.5098-2.9A6.0651 6.0651 0 0 0 4.9807 4.1818a5.9847 5.9847 0 0 0-3.9977 2.9 6.0462 6.0462 0 0 0 .7427 7.0966 5.98 5.98 0 0 0 .511 4.9107 6.051 6.051 0 0 0 6.5146 2.9001A5.9847 5.9847 0 0 0 13.259 23.85a6.0557 6.0557 0 0 0 5.7271-4.1332 5.9895 5.9895 0 0 0 3.9977-2.9001 6.0367 6.0367 0 0 0-.7019-6.9956z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M12 8v8M8 12h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                        <span class="whitespace-nowrap font-medium text-sm hidden group-hover:inline group-[.expanded]:inline">ChatGPT</span>
+                    </a>
+
                     <!-- Admin Panel (Only for Admins) -->
                     {% if current_user.is_authenticated and current_user.is_admin %}
                     <a href="{{ url_for('admin_panel') }}" class="flex items-center gap-4 p-3 rounded-xl hover:bg-indigo-600/20 hover:text-indigo-400 text-slate-300 transition group/item" title="Admin Panel">
