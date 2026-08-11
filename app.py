@@ -51,6 +51,8 @@ def contains_banned_words(text):
 
 # ----------------- DATABASE MODELS -----------------
 
+# ----------------- DATABASE MODELS -----------------
+
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(50), unique=True, nullable=False)
@@ -59,6 +61,51 @@ class User(UserMixin, db.Model):
     pfp_url = db.Column(db.String(300), default="https://placehold.co/150/1e293b/22c55e?text=Steve")
     bio = db.Column(db.String(200), default="Minecraft Myanmar Player ⛏️")
     is_admin = db.Column(db.Boolean, default=False)
+    is_verified = db.Column(db.Boolean, default=False)  # 👈 Added for verified checkmark!
+    
+    fake_followers = db.Column(db.String(20), nullable=True, default="0")
+    fake_likes = db.Column(db.String(20), nullable=True, default="0")
+    like_type_style = db.Column(db.String(50), nullable=True, default="❤️ Classic Red")
+
+    @property
+    def safe_pfp(self):
+        return self.pfp_url or "https://placehold.co/150/1e293b/22c55e?text=Steve"
+
+    @property
+    def safe_like_style(self):
+        return self.like_type_style or "❤️ Classic Red"
+
+
+# 🆕 New Model for Verification Submissions
+class VerificationRequest(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    
+    # Step 1: Reason
+    reason_choice = db.Column(db.String(50), nullable=False)  # 'post_dlc', 'personal', 'other'
+    reason_other = db.Column(db.Text, nullable=True)
+    
+    # Step 3: Admin Choice
+    admin_known = db.Column(db.String(100), nullable=False)
+    
+    # Step 4: Personal Info
+    real_name = db.Column(db.String(100), nullable=False)
+    nickname = db.Column(db.String(100), nullable=True)
+    age = db.Column(db.Integer, nullable=False)
+    face_photo_url = db.Column(db.String(300), nullable=False)
+    
+    # Step 5: Web Links
+    link_1 = db.Column(db.String(300), nullable=False)
+    link_2 = db.Column(db.String(300), nullable=False)
+    link_3 = db.Column(db.String(300), nullable=False)
+    link_4 = db.Column(db.String(300), nullable=True)
+    link_5 = db.Column(db.String(300), nullable=True)
+    
+    status = db.Column(db.String(20), default='pending')  # 'pending', 'approved', 'rejected'
+    reject_reason = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    user = db.relationship('User', backref='verification_requests')
     
     fake_followers = db.Column(db.String(20), nullable=True, default="0")
     fake_likes = db.Column(db.String(20), nullable=True, default="0")
