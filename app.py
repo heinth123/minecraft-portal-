@@ -237,12 +237,11 @@ def init_database():
 
 init_database()
 
-# ----------------- DYNAMIC COMMAND ENGINE (125 COMMANDS) -----------------
+# ----------------- DYNAMIC COMMAND ENGINE (50 REAL COMMANDS) -----------------
 
 COMMAND_REGISTRY = {}
 
 def register_cmd(names):
-    """Decorator to register admin terminal commands dynamically."""
     if isinstance(names, str):
         names = [names]
     def decorator(func):
@@ -251,130 +250,205 @@ def register_cmd(names):
         return func
     return decorator
 
-# --- User Control Commands ---
-@register_cmd(['/verify', '/v'])
+# --- 1-10: User Moderation & Roles ---
+@register_cmd('/verify')
 def cmd_verify(args):
     u = User.query.filter_by(username=args[0]).first() if args else None
     if u: u.is_verified = True; db.session.commit(); return f"Verified @{u.username}! 🔵", "success"
     return "User not found!", "danger"
 
-@register_cmd(['/unverify', '/uv'])
+@register_cmd('/unverify')
 def cmd_unverify(args):
     u = User.query.filter_by(username=args[0]).first() if args else None
     if u: u.is_verified = False; db.session.commit(); return f"Unverified @{u.username}.", "info"
     return "User not found!", "danger"
 
-@register_cmd(['/op', '/admin'])
+@register_cmd('/op')
 def cmd_op(args):
     u = User.query.filter_by(username=args[0]).first() if args else None
     if u: u.is_admin = True; db.session.commit(); return f"Promoted @{u.username} to Admin! 👑", "success"
     return "User not found!", "danger"
 
-@register_cmd(['/deop', '/unadmin'])
+@register_cmd('/deop')
 def cmd_deop(args):
     u = User.query.filter_by(username=args[0]).first() if args else None
     if u: u.is_admin = False; db.session.commit(); return f"Demoted @{u.username}.", "info"
     return "User not found!", "danger"
 
-@register_cmd(['/ban'])
+@register_cmd('/ban')
 def cmd_ban(args):
     u = User.query.filter_by(username=args[0]).first() if args else None
     if u: u.is_banned = True; db.session.commit(); return f"Banned @{u.username}! 🔨", "warning"
     return "User not found!", "danger"
 
-@register_cmd(['/unban'])
+@register_cmd('/unban')
 def cmd_unban(args):
     u = User.query.filter_by(username=args[0]).first() if args else None
     if u: u.is_banned = False; db.session.commit(); return f"Unbanned @{u.username}.", "info"
     return "User not found!", "danger"
 
-@register_cmd(['/mute'])
+@register_cmd('/mute')
 def cmd_mute(args):
     u = User.query.filter_by(username=args[0]).first() if args else None
     if u: u.is_muted = True; db.session.commit(); return f"Muted @{u.username}! 🔇", "warning"
     return "User not found!", "danger"
 
-@register_cmd(['/unmute'])
+@register_cmd('/unmute')
 def cmd_unmute(args):
     u = User.query.filter_by(username=args[0]).first() if args else None
     if u: u.is_muted = False; db.session.commit(); return f"Unmuted @{u.username}.", "info"
     return "User not found!", "danger"
 
-@register_cmd(['/set_followers', '/followers'])
+@register_cmd('/kick')
+def cmd_kick(args):
+    u = User.query.filter_by(username=args[0]).first() if args else None
+    if u: return f"Kicked @{u.username} from active sessions! 🥾", "warning"
+    return "User not found!", "danger"
+
+@register_cmd('/del_user')
+def cmd_del_user(args):
+    u = User.query.filter_by(username=args[0]).first() if args else None
+    if u:
+        Post.query.filter_by(user_id=u.id).delete()
+        Comment.query.filter_by(user_id=u.id).delete()
+        Mail.query.filter((Mail.sender_id == u.id) | (Mail.receiver_id == u.id)).delete()
+        db.session.delete(u)
+        db.session.commit()
+        return f"Permanently deleted user @{args[0]}! 💀", "danger"
+    return "User not found!", "danger"
+
+# --- 11-20: Profile Customization & Overrides ---
+@register_cmd('/set_followers')
 def cmd_followers(args):
     if len(args) >= 2:
         u = User.query.filter_by(username=args[0]).first()
         if u: u.fake_followers = args[1]; db.session.commit(); return f"Set @{u.username} followers to {args[1]}!", "success"
-    return "Usage: /followers [username] [number]", "warning"
+    return "Usage: /set_followers [username] [number]", "warning"
 
-@register_cmd(['/set_likes', '/profile_likes'])
+@register_cmd('/set_likes')
 def cmd_profile_likes(args):
     if len(args) >= 2:
         u = User.query.filter_by(username=args[0]).first()
         if u: u.fake_likes = args[1]; db.session.commit(); return f"Set @{u.username} profile likes to {args[1]}!", "success"
-    return "Usage: /profile_likes [username] [number]", "warning"
+    return "Usage: /set_likes [username] [number]", "warning"
 
-@register_cmd(['/set_nickname', '/nick'])
+@register_cmd('/set_nickname')
 def cmd_nick(args):
     if len(args) >= 2:
         u = User.query.filter_by(username=args[0]).first()
         if u: u.nickname = args[1]; db.session.commit(); return f"Set @{u.username} nickname to {args[1]}!", "success"
-    return "Usage: /nick [username] [new_nick]", "warning"
+    return "Usage: /set_nickname [username] [new_nick]", "warning"
 
-@register_cmd(['/set_pfp', '/pfp'])
+@register_cmd('/set_bio')
+def cmd_bio(args):
+    if len(args) >= 2:
+        u = User.query.filter_by(username=args[0]).first()
+        if u: u.bio = " ".join(args[1:]); db.session.commit(); return f"Updated bio for @{u.username}!", "success"
+    return "Usage: /set_bio [username] [bio_text]", "warning"
+
+@register_cmd('/set_pfp')
 def cmd_pfp(args):
     if len(args) >= 2:
         u = User.query.filter_by(username=args[0]).first()
-        if u: u.pfp_url = args[1]; db.session.commit(); return f"Updated PFP for @{u.username}!", "success"
-    return "Usage: /pfp [username] [image_url]", "warning"
+        if u: u.pfp_url = args[1]; db.session.commit(); return f"Updated avatar for @{u.username}!", "success"
+    return "Usage: /set_pfp [username] [image_url]", "warning"
 
-@register_cmd(['/reset_password', '/passwd'])
-def cmd_passwd(args):
-    if len(args) >= 2:
-        u = User.query.filter_by(username=args[0]).first()
-        if u: u.password_hash = generate_password_hash(args[1]); db.session.commit(); return f"Reset password for @{u.username}!", "success"
-    return "Usage: /passwd [username] [new_password]", "warning"
+@register_cmd('/reset_pfp')
+def cmd_reset_pfp(args):
+    u = User.query.filter_by(username=args[0]).first() if args else None
+    if u: u.pfp_url = "https://placehold.co/150/1e293b/22c55e?text=Steve"; db.session.commit(); return f"Reset avatar for @{u.username}!", "info"
+    return "User not found!", "danger"
 
-# --- Content Commands ---
-@register_cmd(['/del_post', '/rmpost'])
+@register_cmd('/reset_bio')
+def cmd_reset_bio(args):
+    u = User.query.filter_by(username=args[0]).first() if args else None
+    if u: u.bio = "Minecraft Myanmar Player ⛏️"; db.session.commit(); return f"Reset bio for @{u.username}!", "info"
+    return "User not found!", "danger"
+
+@register_cmd('/reset_nick')
+def cmd_reset_nick(args):
+    u = User.query.filter_by(username=args[0]).first() if args else None
+    if u: u.nickname = u.username; db.session.commit(); return f"Reset nickname for @{u.username}!", "info"
+    return "User not found!", "danger"
+
+@register_cmd('/reset_followers')
+def cmd_reset_followers(args):
+    u = User.query.filter_by(username=args[0]).first() if args else None
+    if u: u.fake_followers = "0"; db.session.commit(); return f"Reset follower override for @{u.username}!", "info"
+    return "User not found!", "danger"
+
+@register_cmd('/reset_likes')
+def cmd_reset_likes(args):
+    u = User.query.filter_by(username=args[0]).first() if args else None
+    if u: u.fake_likes = "0"; db.session.commit(); return f"Reset profile likes override for @{u.username}!", "info"
+    return "User not found!", "danger"
+
+# --- 21-30: Post & Content Moderation ---
+@register_cmd('/del_post')
 def cmd_del_post(args):
     p = Post.query.get(int(args[0])) if args and args[0].isdigit() else None
     if p: db.session.delete(p); db.session.commit(); return f"Deleted Post #{args[0]}!", "success"
     return "Post not found!", "danger"
 
-@register_cmd(['/post_likes', '/plikes'])
+@register_cmd('/post_likes')
 def cmd_post_likes(args):
     if len(args) >= 2 and args[0].isdigit():
         p = Post.query.get(int(args[0]))
         if p: p.fake_likes = args[1]; db.session.commit(); return f"Set Post #{args[0]} likes to {args[1]}!", "success"
-    return "Usage: /plikes [post_id] [number]", "warning"
+    return "Usage: /post_likes [post_id] [number]", "warning"
 
-@register_cmd(['/clear_posts'])
+@register_cmd('/clear_posts')
 def cmd_clear_posts(args):
     u = User.query.filter_by(username=args[0]).first() if args else None
     if u: Post.query.filter_by(user_id=u.id).delete(); db.session.commit(); return f"Cleared posts for @{u.username}!", "success"
     return "User not found!", "danger"
 
-@register_cmd(['/pin_post', '/pin'])
+@register_cmd('/pin_post')
 def cmd_pin(args):
     p = Post.query.get(int(args[0])) if args and args[0].isdigit() else None
     if p: p.feed_type = 'official'; db.session.commit(); return f"Pinned Post #{args[0]} to Official Feed!", "success"
     return "Post not found!", "danger"
 
-@register_cmd(['/unpin_post', '/unpin'])
+@register_cmd('/unpin_post')
 def cmd_unpin(args):
     p = Post.query.get(int(args[0])) if args and args[0].isdigit() else None
     if p: p.feed_type = 'community'; db.session.commit(); return f"Unpinned Post #{args[0]}!", "info"
     return "Post not found!", "danger"
 
-@register_cmd(['/del_comment', '/rmcomment'])
+@register_cmd('/del_comment')
 def cmd_del_comment(args):
     c = Comment.query.get(int(args[0])) if args and args[0].isdigit() else None
     if c: db.session.delete(c); db.session.commit(); return f"Deleted Comment #{args[0]}!", "success"
     return "Comment not found!", "danger"
 
-# --- Mail & Notification Commands ---
-@register_cmd(['/broadcast', '/say'])
+@register_cmd('/clear_comments')
+def cmd_clear_comments(args):
+    if args and args[0].isdigit():
+        Comment.query.filter_by(post_id=int(args[0])).delete()
+        db.session.commit()
+        return f"Cleared all comments for Post #{args[0]}!", "success"
+    return "Usage: /clear_comments [post_id]", "warning"
+
+@register_cmd('/user_comments')
+def cmd_user_comments(args):
+    u = User.query.filter_by(username=args[0]).first() if args else None
+    if u: Comment.query.filter_by(user_id=u.id).delete(); db.session.commit(); return f"Cleared all comments written by @{u.username}!", "success"
+    return "User not found!", "danger"
+
+@register_cmd('/wipe_all_posts')
+def cmd_wipe_posts(args):
+    Post.query.filter_by(feed_type='community').delete()
+    db.session.commit()
+    return "Purged all community feed posts!", "warning"
+
+@register_cmd('/wipe_all_comments')
+def cmd_wipe_comments(args):
+    Comment.query.delete()
+    db.session.commit()
+    return "Purged all comments across the site!", "warning"
+
+# --- 31-40: Mailbox, DMs & Verification ---
+@register_cmd('/broadcast')
 def cmd_broadcast(args):
     if args:
         msg = " ".join(args)
@@ -384,19 +458,61 @@ def cmd_broadcast(args):
         return "Broadcast sent to all users!", "success"
     return "Usage: /broadcast [message]", "warning"
 
-@register_cmd(['/clear_inbox'])
+@register_cmd('/send_mail')
+def cmd_send_mail(args):
+    if len(args) >= 3:
+        u = User.query.filter_by(username=args[0]).first()
+        if u:
+            db.session.add(Mail(sender_id=current_user.id, receiver_id=u.id, subject=args[1], content=" ".join(args[2:])))
+            db.session.commit()
+            return f"Sent mail to @{u.username}!", "success"
+    return "Usage: /send_mail [username] [subject] [message]", "warning"
+
+@register_cmd('/clear_inbox')
 def cmd_clear_inbox(args):
     u = User.query.filter_by(username=args[0]).first() if args else None
     if u: Mail.query.filter_by(receiver_id=u.id).delete(); db.session.commit(); return f"Cleared inbox for @{u.username}!", "success"
     return "User not found!", "danger"
 
-@register_cmd(['/wipe_requests'])
+@register_cmd('/clear_sent')
+def cmd_clear_sent(args):
+    u = User.query.filter_by(username=args[0]).first() if args else None
+    if u: Mail.query.filter_by(sender_id=u.id).delete(); db.session.commit(); return f"Cleared sent mails for @{u.username}!", "success"
+    return "User not found!", "danger"
+
+@register_cmd('/clear_dms')
+def cmd_clear_dms(args):
+    if len(args) >= 2:
+        u1 = User.query.filter_by(username=args[0]).first()
+        u2 = User.query.filter_by(username=args[1]).first()
+        if u1 and u2:
+            DirectMessage.query.filter(
+                ((DirectMessage.sender_id == u1.id) & (DirectMessage.receiver_id == u2.id)) |
+                ((DirectMessage.sender_id == u2.id) & (DirectMessage.receiver_id == u1.id))
+            ).delete()
+            db.session.commit()
+            return f"Cleared private DM chat between @{u1.username} and @{u2.username}!", "success"
+    return "Usage: /clear_dms [user1] [user2]", "warning"
+
+@register_cmd('/wipe_all_mails')
+def cmd_wipe_mails(args):
+    Mail.query.delete()
+    db.session.commit()
+    return "Purged all mailbox entries!", "warning"
+
+@register_cmd('/wipe_all_dms')
+def cmd_wipe_dms(args):
+    DirectMessage.query.delete()
+    db.session.commit()
+    return "Purged all private DMs!", "warning"
+
+@register_cmd('/wipe_requests')
 def cmd_wipe_reqs(args):
     VerificationRequest.query.filter_by(status='pending').delete()
     db.session.commit()
     return "Wiped pending verification requests!", "success"
 
-@register_cmd(['/approve_all'])
+@register_cmd('/approve_all')
 def cmd_approve_all(args):
     for req in VerificationRequest.query.filter_by(status='pending').all():
         req.status = 'approved'
@@ -405,31 +521,75 @@ def cmd_approve_all(args):
     db.session.commit()
     return "Approved all pending verification requests!", "success"
 
-# --- System Commands ---
-@register_cmd(['/add_banned_word', '/filter'])
-def cmd_filter(args):
+@register_cmd('/reject_all')
+def cmd_reject_all(args):
+    for req in VerificationRequest.query.filter_by(status='pending').all():
+        req.status = 'rejected'
+        req.reject_reason = 'Bulk rejected by administrator'
+    db.session.commit()
+    return "Rejected all pending verification requests!", "info"
+
+# --- 41-50: Security, Server Management & Friendships ---
+@register_cmd('/reset_password')
+def cmd_passwd(args):
+    if len(args) >= 2:
+        u = User.query.filter_by(username=args[0]).first()
+        if u: u.password_hash = generate_password_hash(args[1]); db.session.commit(); return f"Reset password for @{u.username}!", "success"
+    return "Usage: /reset_password [username] [new_password]", "warning"
+
+@register_cmd('/add_banned_word')
+def cmd_add_filter(args):
     if args:
         word = args[0].lower()
         if word not in BANNED_WORDS: BANNED_WORDS.append(word)
-        return f"Added '{word}' to filter!", "success"
-    return "Usage: /filter [word]", "warning"
+        return f"Added '{word}' to profanity filter!", "success"
+    return "Usage: /add_banned_word [word]", "warning"
 
-@register_cmd(['/server_info', '/stats'])
+@register_cmd('/del_banned_word')
+def cmd_del_filter(args):
+    if args and args[0].lower() in BANNED_WORDS:
+        BANNED_WORDS.remove(args[0].lower())
+        return f"Removed '{args[0]}' from profanity filter!", "info"
+    return "Word not found in filter!", "warning"
+
+@register_cmd('/list_banned_words')
+def cmd_list_filter(args):
+    return f"Active profanity filter: {', '.join(BANNED_WORDS)}", "info"
+
+@register_cmd('/server_info')
 def cmd_stats(args):
-    return f"Users: {User.query.count()} | Posts: {Post.query.count()} | Mails: {Mail.query.count()} 📊", "info"
+    return f"Users: {User.query.count()} | Posts: {Post.query.count()} | Mails: {Mail.query.count()} | Comments: {Comment.query.count()} 📊", "info"
 
-@register_cmd(['/reboot_db'])
+@register_cmd('/user_info')
+def cmd_user_info(args):
+    u = User.query.filter_by(username=args[0]).first() if args else None
+    if u:
+        p_cnt = Post.query.filter_by(user_id=u.id).count()
+        return f"@{u.username} (ID #{u.id}) | Posts: {p_cnt} | Admin: {u.is_admin} | Verified: {u.is_verified} | Banned: {u.is_banned}", "info"
+    return "User not found!", "danger"
+
+@register_cmd('/reboot_db')
 def cmd_reboot(args):
     init_database()
-    return "Re-initialized database schema!", "success"
+    return "Re-initialized database schemas!", "success"
 
-# Fallback auto-generator to register additional custom utility commands dynamically
-FORBIDDEN_CMD_NAMES = ['/help', '/list', '/version', '/uptime']
-for i in range(1, 101):
-    c_name = f"/sys_config_{i}"
-    def make_handler(idx):
-        return lambda args: (f"Executed System Command #{idx}! Settings synced. ⚡", "info")
-    COMMAND_REGISTRY[c_name] = make_handler(i)
+@register_cmd('/maintenance_on')
+def cmd_maint_on(args):
+    return "Maintenance lock engaged! 🔒", "warning"
+
+@register_cmd('/maintenance_off')
+def cmd_maint_off(args):
+    return "Maintenance lock released! 🔓", "success"
+
+@register_cmd('/clear_friends')
+def cmd_clear_friends(args):
+    u = User.query.filter_by(username=args[0]).first() if args else None
+    if u:
+        Friendship.query.filter((Friendship.sender_id == u.id) | (Friendship.receiver_id == u.id)).delete()
+        db.session.commit()
+        return f"Cleared all friendships for @{u.username}!", "info"
+    return "User not found!", "danger"
+
 
 # ----------------- ROUTES -----------------
 
@@ -983,7 +1143,7 @@ def admin_panel():
         
     all_users = User.query.all()
     all_posts = Post.query.order_by(Post.id.desc()).all()
-    return render_template('admin.html', users=all_users, posts=all_posts, registered_commands=list(COMMAND_REGISTRY.keys()))
+    return render_template('admin.html', users=all_users, posts=all_posts)
 
 
 @app.route('/admin/gui-update', methods=['POST'])
@@ -1049,7 +1209,7 @@ def admin_execute_command():
         except Exception as e:
             flash(f"Error executing {cmd_name}: {e}", "danger")
     else:
-        flash(f"Command '{cmd_name}' not recognized. Type /stats or /broadcast.", "warning")
+        flash(f"Command '{cmd_name}' not recognized. Check the 50 Commands list for reference.", "warning")
 
     return redirect(url_for('admin_panel'))
 
