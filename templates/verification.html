@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
+<!-- Include Google reCAPTCHA Script -->
 <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 
 <div class="max-w-2xl mx-auto my-8 p-6 bg-slate-800 border border-slate-700 rounded-2xl shadow-xl text-white">
@@ -8,23 +9,24 @@
         🔵 Request Account Verification
     </h2>
 
-    <form action="{{ url_for('verification_page') }}" method="POST" class="space-y-6">
+    <!-- Multipart Form to allow photo uploads -->
+    <form action="{{ url_for('verification_page') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
         
         <!-- STEP 1: Reason -->
         <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-700 space-y-3">
             <h3 class="text-sm font-bold text-slate-300">Step 1: Why do you want to get verified?</h3>
             <div class="space-y-2 text-xs">
-                <label class="flex items-center gap-2">
-                    <input type="radio" name="reason_choice" value="post_dlc" required> Post the DLC
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" name="reason_choice" value="post_dlc" required class="accent-emerald-500"> Post the DLC
                 </label>
-                <label class="flex items-center gap-2">
-                    <input type="radio" name="reason_choice" value="personal"> Personal
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" name="reason_choice" value="personal" class="accent-emerald-500"> Personal
                 </label>
-                <label class="flex items-center gap-2">
-                    <input type="radio" name="reason_choice" value="other" id="reasonOtherRadio"> Other
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" name="reason_choice" value="other" id="reasonOtherRadio" class="accent-emerald-500"> Other
                 </label>
             </div>
-            <textarea name="reason_other" placeholder="If other, please explain here..." class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white focus:outline-none"></textarea>
+            <textarea name="reason_other" placeholder="If other, please explain here..." class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-emerald-500"></textarea>
         </div>
 
         <!-- STEP 2: Bot Check (reCAPTCHA) -->
@@ -39,32 +41,40 @@
         <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-700 space-y-3">
             <h3 class="text-sm font-bold text-slate-300">Step 3: Who do you know among the admins?</h3>
             <div class="space-y-2 text-xs">
-                <label class="flex items-center gap-2"><input type="radio" name="admin_known" value="River crafted" required> River crafted</label>
-                <label class="flex items-center gap-2"><input type="radio" name="admin_known" value="OverNight_Vo1d (Admin hz/heinth)"> OverNight_Vo1d (Admin hz/heinth)</label>
-                <label class="flex items-center gap-2"><input type="radio" name="admin_known" value="SleepyDraxxzz (Admin)"> SleepyDraxxzz (Admin)</label>
-                <label class="flex items-center gap-2"><input type="radio" name="admin_known" value="Non of them"> Non of them</label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" name="admin_known" value="River crafted" required class="accent-emerald-500"> River crafted
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" name="admin_known" value="OverNight_Vo1d (Admin hz/heinth)" class="accent-emerald-500"> OverNight_Vo1d (Admin hz/heinth)
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" name="admin_known" value="SleepyDraxxzz (Admin)" class="accent-emerald-500"> SleepyDraxxzz (Admin)
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" name="admin_known" value="Non of them" class="accent-emerald-500"> Non of them
+                </label>
             </div>
         </div>
 
-        <!-- STEP 4: Personal Info -->
+        <!-- STEP 4: Personal Info & File Upload -->
         <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-700 space-y-3">
             <h3 class="text-sm font-bold text-slate-300">Step 4: Personal Information</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
                 <div>
                     <label class="block text-slate-400 mb-1">Real Name *</label>
-                    <input type="text" name="real_name" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white">
+                    <input type="text" name="real_name" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white focus:outline-none focus:border-emerald-500">
                 </div>
                 <div>
                     <label class="block text-slate-400 mb-1">Nickname (Optional)</label>
-                    <input type="text" name="nickname" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white">
+                    <input type="text" name="nickname" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white focus:outline-none focus:border-emerald-500">
                 </div>
                 <div>
                     <label class="block text-slate-400 mb-1">Age *</label>
-                    <input type="number" name="age" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white">
+                    <input type="number" name="age" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white focus:outline-none focus:border-emerald-500">
                 </div>
                 <div>
-                    <label class="block text-slate-400 mb-1">Face Photo URL *</label>
-                    <input type="url" name="face_photo_url" placeholder="https://..." required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white">
+                    <label class="block text-slate-400 mb-1">Face Photo Upload (Required) *</label>
+                    <input type="file" name="face_photo" accept="image/*" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-slate-300 file:mr-3 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-emerald-600 file:text-white hover:file:bg-emerald-500 cursor-pointer">
                 </div>
             </div>
         </div>
@@ -73,16 +83,16 @@
         <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-700 space-y-3">
             <h3 class="text-sm font-bold text-slate-300">Step 5: Website Links (So people know you)</h3>
             <div class="space-y-2 text-xs">
-                <input type="url" name="link_1" placeholder="Link 1 *" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white">
-                <input type="url" name="link_2" placeholder="Link 2 *" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white">
-                <input type="url" name="link_3" placeholder="Link 3 *" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white">
-                <input type="url" name="link_4" placeholder="Link 4 (Optional)" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white">
-                <input type="url" name="link_5" placeholder="Link 5 (Optional)" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white">
+                <input type="url" name="link_1" placeholder="Link 1 *" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white focus:outline-none focus:border-emerald-500">
+                <input type="url" name="link_2" placeholder="Link 2 *" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white focus:outline-none focus:border-emerald-500">
+                <input type="url" name="link_3" placeholder="Link 3 *" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white focus:outline-none focus:border-emerald-500">
+                <input type="url" name="link_4" placeholder="Link 4 (Optional)" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white focus:outline-none focus:border-emerald-500">
+                <input type="url" name="link_5" placeholder="Link 5 (Optional)" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white focus:outline-none focus:border-emerald-500">
             </div>
         </div>
 
-        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition">
-            Submit Verification Request
+        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition shadow-lg flex items-center justify-center gap-2">
+            <i class="fa-solid fa-paper-plane"></i> Submit Verification Request
         </button>
     </form>
 </div>
