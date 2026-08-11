@@ -866,6 +866,171 @@ def fake_post_likes(post_id):
     return redirect(request.referrer or url_for('admin_panel'))
 
 
+@app.route('/admin/execute_command', methods=['POST'])
+@login_required
+def admin_execute_command():
+    if not current_user.is_admin:
+        flash("Access denied! Admins only. 🚫", "danger")
+        return redirect(url_for('home'))
+
+    command_str = request.form.get('command_str', '').strip()
+    if not command_str:
+        return redirect(url_for('admin_panel'))
+
+    parts = command_str.split(' ', 2)
+    cmd = parts[0].lower()
+    arg1 = parts[1] if len(parts) > 1 else None
+    arg2 = parts[2] if len(parts) > 2 else None
+
+    # Handle commands
+    if cmd in ['/verify', '/unverify', '/op', '/deop']:
+        if not arg1:
+            flash("Usage: /verify or /op [username]", "warning")
+            return redirect(url_for('admin_panel'))
+        
+        user = User.query.filter_by(username=arg1).first()
+        if not user:
+            flash(f"User '{arg1}' not found!", "danger")
+            return redirect(url_for('admin_panel'))
+
+        if cmd == '/verify':
+            user.is_verified = True
+            flash(f"Verified @{user.username}! 🔵", "success")
+        elif cmd == '/unverify':
+            user.is_verified = False
+            flash(f"Unverified @{user.username}.", "info")
+        elif cmd == '/op':
+            user.is_admin = True
+            flash(f"Promoted @{user.username} to Admin! 👑", "success")
+        elif cmd == '/deop':
+            user.is_admin = False
+            flash(f"Demoted @{user.username} from Admin.", "info")
+
+        db.session.commit()
+
+    elif cmd == '/set_followers' and arg1 and arg2:
+        user = User.query.filter_by(username=arg1).first()
+        if user:
+            user.fake_followers = arg2
+            db.session.commit()
+            flash(f"Set @{user.username} followers to {arg2}! 📈", "success")
+
+    elif cmd == '/set_likes' and arg1 and arg2:
+        user = User.query.filter_by(username=arg1).first()
+        if user:
+            user.fake_likes = arg2
+            db.session.commit()
+            flash(f"Set @{user.username} likes to {arg2}! ❤️", "success")
+
+    elif cmd == '/set_nickname' and arg1 and arg2:
+        user = User.query.filter_by(username=arg1).first()
+        if user:
+            user.nickname = arg2
+            db.session.commit()
+            flash(f"Set @{user.username} nickname to {arg2}! ✏️", "success")
+
+    elif cmd == '/set_pfp' and arg1 and arg2:
+        user = User.query.filter_by(username=arg1).first()
+        if user:
+            user.pfp_url = arg2
+            db.session.commit()
+            flash(f"Set @{user.username} profile photo! 🖼️", "success")
+
+    elif cmd == '/del_post' and arg1:
+        post = Post.query.get(int(arg1)) if arg1.isdigit() else None
+        if post:
+            db.session.delete(post)
+            db.session.commit()
+            flash(f"Deleted Post #{arg1}! 🗑️", "success")
+
+    elif cmd == '/post_likes' and arg1 and arg2:
+        post = Post.query.get(int(arg1)) if arg1.isdigit() else None
+        if post:
+            post.fake_likes = arg2
+            db.session.commit()
+            flash(f"Set Post #{arg1} likes to {arg2}! 👍", "success")
+
+    elif cmd == '/clear_posts' and arg1:
+        user = User.query.filter_by(username=arg1).first()
+        if user:
+            Post.query.filter_by(user_id=user.id).delete()
+            db.session.commit()
+            flash(f"Cleared all posts for @{user.username}! 🧹", "success")
+
+    elif cmd == '/pin_post' and arg1:
+        post = Post.query.get(int(arg1)) if arg1.isdigit() else None
+        if post:
+            post.feed_type = 'official'
+            db.session.commit()
+            flash(f"Pinned Post #{arg1} to Official Feed! 📌", "success")
+
+    elif cmd == '/del_comment' and arg1:
+        comment = Comment.query.get(int(arg1)) if arg1.isdigit() else None
+        if comment:
+            db.session.delete(comment)
+            db.session.commit()
+            flash(f"Deleted Comment #{arg1}! 🗑️", "success")
+
+    elif cmd == '/broadcast' and arg1:
+        full_msg = f"{arg1} {arg2 or ''}".strip()
+        all_users = User.query.all()
+        for u in all_users:
+            mail = Mail(sender_id=current_user.id, receiver_id=u.id, subject="📢 Official System Announcement", content=full_msg)
+            db.session.add(mail)
+        db.session.commit()
+        flash("Broadcasted message to ALL players inbox! ✉️", "success")
+
+    elif cmd == '/clear_inbox' and arg1:
+        user = User.query.filter_by(username=arg1).first()
+        if user:
+            Mail.query.filter_by(receiver_id=user.id).delete()
+            db.session.commit()
+            flash(f"Cleared inbox for @{user.username}! 📭", "success")
+
+    elif cmd == '/wipe_requests':
+        VerificationRequest.query.filter_by(status='pending').delete()
+        db.session.commit()
+        flash("Wiped all pending verification requests! 🧹", "success")
+
+    elif cmd == '/approve_all':
+        pending = VerificationRequest.query.filter_by(status='pending').all()
+        for req in pending:
+            req.status = 'approved'
+            u = User.query.get(req.user_id)
+            if u:
+                u.is_verified = True
+        db.session.commit()
+        flash("Approved all pending verification requests! ✅", "success")
+
+    elif cmd == '/add_banned_word' and arg1:
+        word = arg1.lower()
+        if word not in BANNED_WORDS:
+            BANNED_WORDS.append(word)
+            flash(f"Added '{word}' to global profanity filter! 🚫", "success")
+
+    elif cmd == '/reset_password' and arg1 and arg2:
+        user = User.query.filter_by(username=arg1).first()
+        if user:
+            user.password_hash = generate_password_hash(arg2)
+            db.session.commit()
+            flash(f"Password reset for @{user.username}! 🔑", "success")
+
+    elif cmd == '/server_info':
+        u_count = User.query.count()
+        p_count = Post.query.count()
+        m_count = Mail.query.count()
+        flash(f"Server Stats: {u_count} Users | {p_count} Posts | {m_count} Mails 📊", "info")
+
+    elif cmd == '/reboot_db':
+        init_database()
+        flash("Re-initialized database schemas! ⚡", "success")
+
+    else:
+        flash(f"Command processed: {command_str} ✨", "info")
+
+    return redirect(url_for('admin_panel'))
+
+
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
