@@ -13,17 +13,17 @@
             <img src="{{ user.safe_pfp }}" alt="Avatar" style="width: 120px; height: 120px; border-radius: 50%; border: 3px solid #38bdf8; object-fit: cover;">
         </div>
 
-        <!-- Nickname & Admin Badge -->
-        <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 5px;">
+        <!-- Nickname & Sleek Verified Badge (Admin or Verified) -->
+        <div style="display: flex; align-items: center; justify-content: center; gap: 4px; margin-bottom: 5px;">
             <h2 style="margin: 0; font-size: 1.8rem; font-weight: 700;">{{ user.nickname }}</h2>
             
-           {% if user.is_admin %}
-    <!-- Sleek Verified Blue Checkmark -->
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle; margin-left: 4px;" title="Verified">
-        <path d="M22.25 12c0-1.43-.88-2.67-2.19-3.34.25-1.4-.2-2.85-1.23-3.88-1.03-1.03-2.48-1.48-3.88-1.23C14.28 2.24 13.04 1.36 11.61 1.36s-2.67.88-3.34 2.19c-1.4-.25-2.85.2-3.88 1.23-1.03 1.03-1.48 2.48-1.23 3.88C1.86 9.33.98 10.57.98 12s.88 2.67 2.19 3.34c-.25 1.4.2 2.85 1.23 3.88 1.03 1.03 2.48 1.48 3.88 1.23.67 1.31 1.91 2.19 3.34 2.19s2.67-.88 3.34-2.19c1.4.25 2.85-.2 3.88-1.23 1.03-1.03 1.48-2.48 1.23-3.88 1.31-.67 2.19-1.91 2.19-3.34z" fill="#1d9bf0"/>
-        <path d="M9.86 16.02l-4.13-4.13 1.41-1.41 2.72 2.72 6.83-6.83 1.41 1.41-8.24 8.24z" fill="#ffffff"/>
-    </svg>
-{% endif %}
+            {% if user.is_admin or user.is_verified %}
+                <!-- Sleek Verified Blue Checkmark -->
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle; margin-left: 4px;" title="Verified">
+                    <path d="M22.25 12c0-1.43-.88-2.67-2.19-3.34.25-1.4-.2-2.85-1.23-3.88-1.03-1.03-2.48-1.48-3.88-1.23C14.28 2.24 13.04 1.36 11.61 1.36s-2.67.88-3.34 2.19c-1.4-.25-2.85.2-3.88 1.23-1.03 1.03-1.48 2.48-1.23 3.88C1.86 9.33.98 10.57.98 12s.88 2.67 2.19 3.34c-.25 1.4.2 2.85 1.23 3.88 1.03 1.03 2.48 1.48 3.88 1.23.67 1.31 1.91 2.19 3.34 2.19s2.67-.88 3.34-2.19c1.4.25 2.85-.2 3.88-1.23 1.03-1.03 1.48-2.48 1.23-3.88 1.31-.67 2.19-1.91 2.19-3.34z" fill="#1d9bf0"/>
+                    <path d="M9.86 16.02l-4.13-4.13 1.41-1.41 2.72 2.72 6.83-6.83 1.41 1.41-8.24 8.24z" fill="#ffffff"/>
+                </svg>
+            {% endif %}
         </div>
 
         <!-- Username & Bio -->
@@ -31,11 +31,14 @@
         <p style="color: #cbd5e1; font-style: italic; margin-bottom: 20px;">"{{ user.bio }}"</p>
 
         <!-- Action Buttons -->
-        <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-bottom: 25px;">
+        <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-bottom: 15px;">
             {% if current_user.id == user.id %}
                 <button onclick="document.getElementById('editModal').style.display='flex'" style="background: #334155; color: #38bdf8; border: 1px solid #38bdf8; padding: 8px 18px; border-radius: 20px; cursor: pointer; font-weight: 600;">
                     ✏️ Edit Profile
                 </button>
+                <a href="{{ url_for('verification_page') }}" style="background: #0f172a; color: #38bdf8; border: 1px solid #0284c7; padding: 8px 18px; border-radius: 20px; text-decoration: none; font-weight: 600;">
+                    ⚙️ Settings & Verification
+                </a>
             {% else %}
                 <a href="{{ url_for('video_call', user_id=user.id) }}" style="background: #22c55e; color: white; text-decoration: none; padding: 8px 18px; border-radius: 20px; font-weight: 600;">
                     📞 Call {{ user.nickname }}
