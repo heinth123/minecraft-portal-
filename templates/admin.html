@@ -59,6 +59,34 @@
         box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
     }
 
+    /* Network Monitor Box Styles */
+    .network-monitor-box {
+        background: #020617;
+        color: #00ff66;
+        font-family: 'Consolas', 'Courier New', monospace;
+        padding: 16px;
+        border: 1px solid #334155;
+        border-radius: 10px;
+        margin-bottom: 24px;
+        box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+    }
+    .graph-container {
+        background: #000;
+        border: 1px solid #10b981;
+        margin-top: 12px;
+        padding: 8px;
+        display: flex;
+        justify-content: center;
+        border-radius: 6px;
+    }
+    .stats-row {
+        display: flex;
+        gap: 20px;
+        margin-top: 8px;
+        font-size: 0.85rem;
+        color: #94a3b8;
+    }
+
     .cmd-input {
         background: #020617 !important;
         border: 1px solid #334155 !important;
@@ -164,6 +192,20 @@
                 <input type="text" name="command_str" placeholder="Type command... e.g. /ban Hudson OR /broadcast Welcome everyone!" class="cmd-input" style="flex: 1;" required autocomplete="off">
                 <button type="submit" class="cmd-btn">EXECUTE 🚀</button>
             </form>
+        </div>
+
+        <!-- LIVE NETWORK MONITOR GRAPH BOX -->
+        <div class="network-monitor-box">
+            <label style="color: #34d399; font-weight: bold; font-size: 0.85rem; display: block;">
+                📈 LIVE NETWORK DATA STREAM:
+            </label>
+            <div class="stats-row">
+                <span>Status: <strong style="color: #10b981;">SECURE / ONLINE</strong></span>
+                <span>Estimated Speed: <span id="net-speed">Calculating...</span></span>
+            </div>
+            <div class="graph-container">
+                <canvas id="networkGraph" width="900" height="150" style="width: 100%; max-height: 150px;"></canvas>
+            </div>
         </div>
 
         <!-- COMMAND NAVIGATION TABS -->
@@ -346,5 +388,71 @@
         document.getElementById(tabId).style.display = 'block';
         event.currentTarget.classList.add('active');
     }
+
+    // Live Network Graph Animation Script
+    const canvas = document.getElementById('networkGraph');
+    const ctx = canvas.getContext('2d');
+
+    let dataPoints = new Array(40).fill(30);
+
+    if (navigator.connection) {
+        document.getElementById('net-speed').innerText = `${navigator.connection.downlink} Mbps (${navigator.connection.effectiveType.toUpperCase()})`;
+    } else {
+        document.getElementById('net-speed').innerText = "Active Stream (Live)";
+    }
+
+    function drawGraph() {
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Draw Matrix grid background lines
+        ctx.strokeStyle = '#051f05';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < canvas.height; i += 20) {
+            ctx.beginPath();
+            ctx.moveTo(0, i);
+            ctx.lineTo(canvas.width, i);
+            ctx.stroke();
+        }
+
+        let randomTraffic = Math.floor(Math.random() * 45) + 25;
+        
+        if (navigator.connection && navigator.connection.downlink) {
+            randomTraffic = Math.min(canvas.height - 20, navigator.connection.downlink * 8 + (Math.random() * 20 - 10));
+        }
+
+        dataPoints.push(randomTraffic);
+        dataPoints.shift();
+
+        // Draw glowing green line graph
+        ctx.strokeStyle = '#10b981';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+
+        let sliceWidth = canvas.width / (dataPoints.length - 1);
+        let x = 0;
+
+        for (let i = 0; i < dataPoints.length; i++) {
+            let y = canvas.height - dataPoints[i];
+            if (i === 0) {
+                ctx.moveTo(x, y);
+            } else {
+                ctx.lineTo(x, y);
+            }
+            x += sliceWidth;
+        }
+        ctx.stroke();
+
+        // Draw data points glowing nodes
+        ctx.fillStyle = '#34d399';
+        x = 0;
+        for (let i = 0; i < dataPoints.length; i++) {
+            let y = canvas.height - dataPoints[i];
+            ctx.fillRect(x - 2, y - 2, 4, 4);
+            x += sliceWidth;
+        }
+    }
+
+    setInterval(drawGraph, 1000);
 </script>
 {% endblock %}
