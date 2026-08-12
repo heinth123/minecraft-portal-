@@ -13,6 +13,8 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "minecraft_myanmar_super_secret_key_2026")
 
 # ----------------- GROQ AI CONFIGURATION -----------------
+# Option 1 (Recommended): Set GROQ_API_KEY in your Render environment variables.
+# Option 2: Paste your Groq API key directly into the quotes below (e.g. "gsk_...").
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY") or "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"
 
 # File Upload Configuration
@@ -752,15 +754,45 @@ def mailbox():
 
     received_mails = Mail.query.filter_by(receiver_id=current_user.id).order_by(Mail.created_at.desc()).all()
     sent_mails = Mail.query.filter_by(sender_id=current_user.id).order_by(Mail.created_at.desc()).all()
-    users = User.query.filter(User.id != current_user.id).all()
-    pending_requests = VerificationRequest.query.filter_by(status='pending').all() if current_user.is_admin else []
-    return render_template('mailbox.html', received_mails=received_mails, sent_mails=sent_mails, users=users, pending_requests=pending_requests)
+    all_other_users = User.query.filter(User.id != current_user.id).all()
+    
+    pending_verifications = []
+    if current_user.is_admin:
+        try:
+            pending_verifications = VerificationRequest.query.filter_by(status='pending').all()
+        except Exception as e:
+            app.logger.error(f"Verification query error: {e}")
+
+    return render_template('mailbox.html', 
+                           received_mails=received_mails, 
+                           sent_mails=sent_mails, 
+                           all_users=all_other_users,
+                           pending_verifications=pending_verifications)
 
 
-@app.route('/dm/<int:receiver_id>', methods=['GET', 'POST'])
+@app.route('/chat')
+@login_required
+def chat():
+    all_users = User.query.filter(User.id != current_user.id).all()
+    all_dms = DirectMessage.query.filter(
+        (DirectMessage.sender_id == current_user.id) | (DirectMessage.receiver_id == current_user.id)
+    ).order_by(DirectMessage.created_at.desc()).all()
+
+    chat_partner_ids = []
+    for msg in all_dms:
+        partner_id = msg.receiver_id if msg.sender_id == current_user.id else msg.sender_id
+        if partner_id not in chat_partner_ids:
+            chat_partner_ids.append(partner_id)
+
+    recent_chats = User.query.filter(User.id.in_(chat_partner_ids)).all() if chat_partner_ids else []
+    return render_template('chat.html', recent_chats=recent_chats, all_users=all_users)
+
+
+@app.route('/chat/dm/<int:receiver_id>', methods=['GET', 'POST'])
 @login_required
 def dm(receiver_id):
     receiver = User.query.get_or_404(receiver_id)
+    
     if request.method == 'POST':
         content = request.form.get('content', '').strip()
         if contains_banned_words(content):
@@ -1204,31 +1236,6 @@ def fake_post_likes(post_id):
     return redirect(request.referrer or url_for('admin_panel'))
 
 
-# ----------------- ADMIN DIRECTORY SCAN ROUTE -----------------
-
-@app.route('/admin/dir_scan')
-@login_required
-def admin_dir_scan():
-    if not current_user.is_admin:
-        flash("Access denied! Admins only. 🚫", "danger")
-        return redirect(url_for('home'))
-    
-    all_users = User.query.all()
-    all_posts = Post.query.all()
-    
-    system_info = {
-        "os_env": "Linux container (Render Node)",
-        "python_version": "3.11.x",
-        "database_type": "SQLite / PostgreSQL",
-        "total_users": len(all_users),
-        "total_posts": len(all_posts),
-        "server_status": "SECURE / ACTIVE",
-        "storage_allocation": "4.2 GB / 10 GB"
-    }
-    
-    return render_template('dir_scan.html', users=all_users, posts=all_posts, info=system_info)
-
-
 @app.route('/admin/execute_command', methods=['POST'])
 @login_required
 def admin_execute_command():
@@ -1239,9 +1246,6 @@ def admin_execute_command():
     command_str = request.form.get('command_str', '').strip()
     if not command_str:
         return redirect(url_for('admin_panel'))
-
-    if command_str.lower() == '/dir/s':
-        return redirect(url_for('admin_dir_scan'))
 
     parts = command_str.split(' ')
     cmd_name = parts[0].lower()
