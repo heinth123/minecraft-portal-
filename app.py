@@ -240,7 +240,7 @@ def init_database():
 
 init_database()
 
-# ----------------- DYNAMIC COMMAND ENGINE (51 COMMANDS) -----------------
+# ----------------- DYNAMIC COMMAND ENGINE (50 REAL COMMANDS) -----------------
 
 COMMAND_REGISTRY = {}
 
@@ -532,7 +532,7 @@ def cmd_reject_all(args):
     db.session.commit()
     return "Rejected all pending verification requests!", "info"
 
-# --- 41-51: Security, Server Management & Directory Scan ---
+# --- 41-50: Security, Server Management & Friendships ---
 @register_cmd('/reset_password')
 def cmd_passwd(args):
     if len(args) >= 2:
@@ -594,75 +594,7 @@ def cmd_clear_friends(args):
     return "User not found!", "danger"
 
 
-# ----------------- STANDARD CORE APP ROUTES -----------------
-
-@app.route('/')
-def home():
-    posts = Post.query.order_by(Post.created_at.desc()).all()
-    return render_template('home.html', posts=posts)
-
-
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        username = request.form.get('username', '').strip()
-        password = request.form.get('password', '').strip()
-        user = User.query.filter_by(username=username).first()
-        
-        if user and check_password_hash(user.password_hash, password):
-            if user.is_banned:
-                flash('Your account has been banned by an administrator! 🔨', 'danger')
-                return redirect(url_for('login'))
-            login_user(user)
-            flash('Logged in successfully! 🚀', 'success')
-            return redirect(url_for('home'))
-        else:
-            flash('Invalid username or password!', 'danger')
-    return render_template('login.html')
-
-
-@app.route('/register', methods=['GET', 'POST'])
-def register():
-    if request.method == 'POST':
-        username = request.form.get('username', '').strip()
-        nickname = request.form.get('nickname', '').strip() or username
-        password = request.form.get('password', '').strip()
-        
-        if contains_banned_words(username) or contains_banned_words(nickname):
-            flash('Username or nickname contains restricted words! 🚫', 'danger')
-            return redirect(url_for('register'))
-
-        if User.query.filter_by(username=username).first():
-            flash('Username already exists!', 'danger')
-            return redirect(url_for('register'))
-
-        new_user = User(
-            username=username,
-            nickname=nickname,
-            password_hash=generate_password_hash(password)
-        )
-        db.session.add(new_user)
-        db.session.commit()
-        login_user(new_user)
-        flash('Account created successfully! 🎉', 'success')
-        return redirect(url_for('home'))
-    return render_template('register.html')
-
-
-@app.route('/logout')
-@login_required
-def logout():
-    logout_user()
-    flash('Logged out successfully!', 'info')
-    return redirect(url_for('home'))
-
-
-@app.route('/profile/<username>')
-def profile(username):
-    user = User.query.filter_by(username=username).first_or_404()
-    posts = Post.query.filter_by(user_id=user.id).order_by(Post.created_at.desc()).all()
-    return render_template('profile.html', profile_user=user, posts=posts)
-
+# ----------------- ROUTES -----------------
 
 @app.route('/chatgpt')
 @login_required
@@ -674,17 +606,19 @@ def ai_chat():
 @login_required
 def ask_ai():
     prompt = request.form.get('prompt', '').strip()
+    
     if not prompt:
         return {"reply": "Please enter a message! 🤖"}
 
     if not GROQ_API_KEY or GROQ_API_KEY == "YOUR_GROQ_API_KEY_HERE":
-        return {"reply": "Groq API Key is missing! Please set GROQ_API_KEY in Render settings ⚠️"}
+        return {"reply": "Groq API Key is missing! Please set GROQ_API_KEY in Render settings or inside app.py ⚠️"}
 
     endpoint = "https://api.groq.com/openai/v1/chat/completions"
     headers = {
         "Authorization": f"Bearer {GROQ_API_KEY}",
         "Content-Type": "application/json"
     }
+    
     payload = {
         "model": "llama-3.3-70b-versatile",
         "messages": [
@@ -696,10 +630,12 @@ def ask_ai():
     try:
         response = requests.post(endpoint, json=payload, headers=headers, timeout=10)
         data = response.json()
+        
         if "choices" in data and len(data["choices"]) > 0:
-            return {"reply": data["choices"][0]["message"]["content"]}
+            reply_text = data["choices"][0]["message"]["content"]
+            return {"reply": reply_text}
         else:
-            return {"reply": "AI response error. Please check your Groq API key quota! ⚠️"}
+            return {"reply": "AI response error. Please check your Groq API key or quota! ⚠️"}
     except Exception as e:
         return {"reply": f"Failed to connect to Groq API: {e}"}
 
@@ -712,6 +648,18 @@ def verification_page():
         return redirect(url_for('profile', username=current_user.username))
         
     if request.method == 'POST':
+        recaptcha_response = request.form.get('g-recaptcha-response')
+        verify_url = "https://www.google.com/recaptcha/api/siteverify"
+        payload = {'secret': RECAPTCHA_SECRET_KEY, 'response': recaptcha_response}
+        try:
+            res = requests.post(verify_url, data=payload, timeout=5).json()
+            if not res.get('success'):
+                flash('Please complete the "I am not a robot" test! 🤖🚫', 'danger')
+                return redirect(url_for('verification_page'))
+        except Exception:
+            flash('reCAPTCHA verification failed! Try again.', 'danger')
+            return redirect(url_for('verification_page'))
+
         file = request.files.get('face_photo')
         if not file or file.filename == '':
             flash('Please upload a valid face photo! 📷', 'danger')
@@ -732,14 +680,48 @@ def verification_page():
             face_photo_url=face_photo_url,
             link_1=request.form.get('link_1', '').strip(),
             link_2=request.form.get('link_2', '').strip(),
-            link_3=request.form.get('link_3', '').strip()
+            link_3=request.form.get('link_3', '').strip(),
+            link_4=request.form.get('link_4', '').strip(),
+            link_5=request.form.get('link_5', '').strip()
         )
         db.session.add(req)
         db.session.commit()
-        flash('Verification request submitted successfully! 📩', 'success')
+        flash('Verification request submitted! Admin will review your application. 📩', 'success')
         return redirect(url_for('profile', username=current_user.username))
 
     return render_template('verification.html')
+
+
+@app.route('/admin/verify_action/<int:req_id>', methods=['POST'])
+@login_required
+def verify_action(req_id):
+    if not current_user.is_admin:
+        return redirect(url_for('home'))
+        
+    req_item = VerificationRequest.query.get_or_404(req_id)
+    action = request.form.get('action')
+    reason = request.form.get('reason', '').strip()
+    target_user = User.query.get(req_item.user_id)
+    
+    if action == 'approve':
+        req_item.status = 'approved'
+        target_user.is_verified = True
+        flash(f"Approved verification for {target_user.username}! ✅", "success")
+    elif action == 'reject':
+        req_item.status = 'rejected'
+        req_item.reject_reason = reason
+        target_user.is_verified = False
+        flash(f"Rejected verification for {target_user.username}. ❌", "info")
+
+    db.session.commit()
+    return redirect(request.referrer or url_for('mailbox'))
+
+
+@app.route('/call/<int:user_id>')
+@login_required
+def video_call(user_id):
+    target_user = User.query.get_or_404(user_id)
+    return render_template('video_call.html', target_user=target_user)
 
 
 @app.route('/mailbox', methods=['GET', 'POST'])
@@ -750,51 +732,485 @@ def mailbox():
         subject = request.form.get('subject', '').strip()
         content = request.form.get('content', '').strip()
         
+        if contains_banned_words(subject) or contains_banned_words(content):
+            flash('Your mail contains inappropriate language! 🚫', 'danger')
+            return redirect(url_for('mailbox'))
+
         if receiver_id and subject and content:
-            db.session.add(Mail(sender_id=current_user.id, receiver_id=int(receiver_id), subject=subject, content=content))
+            new_mail = Mail(
+                sender_id=current_user.id,
+                receiver_id=int(receiver_id),
+                subject=subject,
+                content=content
+            )
+            db.session.add(new_mail)
             db.session.commit()
             flash('Mail sent successfully! ✉️', 'success')
             return redirect(url_for('mailbox'))
         else:
-            flash('Please fill out all fields!', 'danger')
+            flash('Please fill out all fields to send mail!', 'danger')
 
     received_mails = Mail.query.filter_by(receiver_id=current_user.id).order_by(Mail.created_at.desc()).all()
     sent_mails = Mail.query.filter_by(sender_id=current_user.id).order_by(Mail.created_at.desc()).all()
     users = User.query.filter(User.id != current_user.id).all()
-    return render_template('mailbox.html', received_mails=received_mails, sent_mails=sent_mails, users=users)
+    pending_requests = VerificationRequest.query.filter_by(status='pending').all() if current_user.is_admin else []
+    return render_template('mailbox.html', received_mails=received_mails, sent_mails=sent_mails, users=users, pending_requests=pending_requests)
 
 
-@app.route('/fake_stats/<int:user_id>', methods=['POST'])
+@app.route('/dm/<int:receiver_id>', methods=['GET', 'POST'])
+@login_required
+def dm(receiver_id):
+    receiver = User.query.get_or_404(receiver_id)
+    if request.method == 'POST':
+        content = request.form.get('content', '').strip()
+        if contains_banned_words(content):
+            flash('Your message contains inappropriate language! 🚫', 'danger')
+            return redirect(url_for('dm', receiver_id=receiver_id))
+
+        if content:
+            msg = DirectMessage(sender_id=current_user.id, receiver_id=receiver_id, content=content)
+            db.session.add(msg)
+            db.session.commit()
+            return redirect(url_for('dm', receiver_id=receiver_id))
+            
+    messages = DirectMessage.query.filter(
+        ((DirectMessage.sender_id == current_user.id) & (DirectMessage.receiver_id == receiver_id)) |
+        ((DirectMessage.sender_id == receiver_id) & (DirectMessage.receiver_id == current_user.id))
+    ).order_by(DirectMessage.created_at.asc()).all()
+    
+    return render_template('dm.html', receiver=receiver, messages=messages)
+
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('home'))
+        
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '')
+        
+        user = User.query.filter_by(username=username).first()
+        if user and check_password_hash(user.password_hash, password):
+            if getattr(user, 'is_banned', False):
+                flash('Your account is banned! 🔨', 'danger')
+                return redirect(url_for('login'))
+            login_user(user)
+            flash('Welcome back! 🎮', 'success')
+            return redirect(url_for('home'))
+        else:
+            flash('Invalid username or password!', 'danger')
+            
+    return render_template('login.html')
+
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if current_user.is_authenticated:
+        return redirect(url_for('home'))
+        
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '')
+        confirm_password = request.form.get('confirm_password', '')
+        
+        if not username:
+            flash('Username cannot be blank! 🚫', 'danger')
+            return redirect(url_for('register'))
+
+        if contains_banned_words(username):
+            flash('That username contains inappropriate or invalid words! Please choose another. 🚫', 'danger')
+            return redirect(url_for('register'))
+
+        if len(username) < 2:
+            flash('Username must be at least 2 characters long! 🚫', 'danger')
+            return redirect(url_for('register'))
+
+        if password != confirm_password:
+            flash('Passwords do not match!', 'danger')
+            return redirect(url_for('register'))
+            
+        if User.query.filter_by(username=username).first():
+            flash('Username already exists!', 'danger')
+            return redirect(url_for('register'))
+            
+        hashed_pw = generate_password_hash(password)
+        new_user = User(username=username, nickname=username, password_hash=hashed_pw)
+        db.session.add(new_user)
+        db.session.commit()
+        
+        login_user(new_user)
+        flash('Account created! Welcome to Minecraft Myanmar! 🎉', 'success')
+        return redirect(url_for('home'))
+        
+    return render_template('register.html')
+
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('login'))
+
+
+@app.route('/', methods=['GET', 'POST'])
+@login_required
+def home():
+    if request.method == 'POST':
+        title = request.form.get('title', '').strip()
+        content = request.form.get('content', '').strip()
+        image_url = request.form.get('image_url')
+        download_link = request.form.get('download_link')
+        feed_type = 'official' if current_user.is_admin else 'community'
+
+        if contains_banned_words(title) or contains_banned_words(content):
+            flash('Your post contains inappropriate language! 🚫', 'danger')
+            return redirect(url_for('home'))
+
+        if title and content:
+            new_post = Post(
+                title=title,
+                content=content,
+                image_url=image_url,
+                download_link=download_link,
+                feed_type=feed_type,
+                user_id=current_user.id
+            )
+            db.session.add(new_post)
+            db.session.commit()
+            flash('Published successfully! ✨', 'success')
+            return redirect(url_for('home'))
+
+    posts = Post.query.filter_by(feed_type='official').order_by(Post.id.desc()).all()
+    return render_template('index.html', posts=posts, feed_title="🏠 Official Announcements & Addons")
+
+
+@app.route('/community')
+@login_required
+def community():
+    posts = Post.query.filter_by(feed_type='community').order_by(Post.id.desc()).all()
+    return render_template('community.html', posts=posts)
+
+
+@app.route('/create_post', methods=['POST'])
+@login_required
+def create_post():
+    title = request.form.get('title', '').strip()
+    content = request.form.get('content', '').strip()
+    image_url = request.form.get('image_url')
+    download_link = request.form.get('download_link')
+    feed_type = request.form.get('feed_type', 'community')
+    
+    if feed_type == 'official' and not current_user.is_admin:
+        feed_type = 'community'
+
+    if contains_banned_words(title) or contains_banned_words(content):
+        flash('Your post contains inappropriate language and was blocked! 🚫', 'danger')
+        return redirect(url_for('home' if feed_type == 'official' else 'community'))
+
+    if title and content:
+        new_post = Post(
+            title=title,
+            content=content,
+            image_url=image_url,
+            download_link=download_link,
+            feed_type=feed_type,
+            user_id=current_user.id
+        )
+        db.session.add(new_post)
+        db.session.commit()
+        flash('Published successfully! ✨', 'success')
+        
+    return redirect(url_for('home' if feed_type == 'official' else 'community'))
+
+
+@app.route('/friends')
+@login_required
+def friends_list():
+    friendships = Friendship.query.filter(
+        ((Friendship.sender_id == current_user.id) | (Friendship.receiver_id == current_user.id)) &
+        (Friendship.status == 'accepted')
+    ).all()
+
+    friends = [f.receiver if f.sender_id == current_user.id else f.sender for f in friendships]
+    pending_requests = Friendship.query.filter_by(receiver_id=current_user.id, status='pending').all()
+    all_users = User.query.filter(User.id != current_user.id).all()
+
+    return render_template('friends.html', friends=friends, pending_requests=pending_requests, all_users=all_users)
+
+
+@app.route('/search_friends', methods=['GET'])
+@login_required
+def search_friends():
+    query = request.args.get('query', '').strip()
+    search_results = []
+    
+    if query:
+        search_results = User.query.filter(
+            ((User.username.ilike(f"%{query}%")) | (User.nickname.ilike(f"%{query}%"))),
+            User.id != current_user.id
+        ).all()
+
+    all_other_users = User.query.filter(User.id != current_user.id).all()
+    
+    def get_follower_count(u):
+        if u.fake_followers and str(u.fake_followers).isdigit():
+            return int(u.fake_followers)
+        return Follow.query.filter_by(followed_id=u.id).count()
+
+    recommended_users = sorted(
+        all_other_users,
+        key=lambda u: (u.is_admin, get_follower_count(u)),
+        reverse=True
+    )[:5]
+
+    return render_template('search_friends.html', results=search_results, query=query, recommended=recommended_users)
+
+
+@app.route('/friend/send/<int:user_id>', methods=['POST'])
+@login_required
+def send_friend_request(user_id):
+    if user_id != current_user.id:
+        existing = Friendship.query.filter(
+            ((Friendship.sender_id == current_user.id) & (Friendship.receiver_id == user_id)) |
+            ((Friendship.sender_id == user_id) & (Friendship.receiver_id == current_user.id))
+        ).first()
+
+        if not existing:
+            request_obj = Friendship(sender_id=current_user.id, receiver_id=user_id, status='pending')
+            db.session.add(request_obj)
+            db.session.commit()
+            flash('Friend request sent! 🤝', 'success')
+
+    return redirect(request.referrer or url_for('friends_list'))
+
+
+@app.route('/friend/accept/<int:request_id>', methods=['POST'])
+@login_required
+def accept_friend_request(request_id):
+    friend_req = Friendship.query.get_or_404(request_id)
+    if friend_req.receiver_id == current_user.id:
+        friend_req.status = 'accepted'
+        db.session.commit()
+        flash('Friend request accepted! 🎉', 'success')
+    return redirect(request.referrer or url_for('friends_list'))
+
+
+@app.route('/friend/remove/<int:user_id>', methods=['POST'])
+@login_required
+def remove_friend(user_id):
+    friendship = Friendship.query.filter(
+        ((Friendship.sender_id == current_user.id) & (Friendship.receiver_id == user_id)) |
+        ((Friendship.sender_id == user_id) & (Friendship.receiver_id == current_user.id))
+    ).first()
+
+    if friendship:
+        db.session.delete(friendship)
+        db.session.commit()
+        flash('Friend removed.', 'info')
+
+    return redirect(request.referrer or url_for('friends_list'))
+
+
+@app.route('/post/<int:post_id>/like', methods=['POST'])
+@login_required
+def like_post(post_id):
+    existing_like = PostLike.query.filter_by(user_id=current_user.id, post_id=post_id).first()
+    if not existing_like:
+        new_like = PostLike(user_id=current_user.id, post_id=post_id)
+        db.session.add(new_like)
+        db.session.commit()
+    return redirect(request.referrer or url_for('home'))
+
+
+@app.route('/post/<int:post_id>/comment', methods=['POST'])
+@login_required
+def add_comment(post_id):
+    content = request.form.get('content', '').strip()
+    if contains_banned_words(content):
+        flash('Your comment contains inappropriate language! 🚫', 'danger')
+        return redirect(request.referrer or url_for('home'))
+
+    if content:
+        comment = Comment(content=content, user_id=current_user.id, post_id=post_id)
+        db.session.add(comment)
+        db.session.commit()
+    return redirect(request.referrer or url_for('home'))
+
+
+@app.route('/user/<int:user_id>/follow', methods=['POST'])
+@login_required
+def follow_user(user_id):
+    if user_id != current_user.id:
+        existing = Follow.query.filter_by(follower_id=current_user.id, followed_id=user_id).first()
+        if existing:
+            db.session.delete(existing)
+        else:
+            new_follow = Follow(follower_id=current_user.id, followed_id=user_id)
+            db.session.add(new_follow)
+        db.session.commit()
+    return redirect(request.referrer or url_for('home'))
+
+
+@app.route('/user/<int:user_id>/profile_like', methods=['POST'])
+@login_required
+def profile_like(user_id):
+    today = datetime.now().strftime("%Y-%m-%d")
+    existing = ProfileLike.query.filter_by(giver_id=current_user.id, receiver_id=user_id, liked_date=today).first()
+    
+    if not existing:
+        like_entry = ProfileLike(giver_id=current_user.id, receiver_id=user_id, liked_date=today)
+        db.session.add(like_entry)
+        db.session.commit()
+        flash('Gave profile like for today! ❤️', 'success')
+    else:
+        flash('You already liked this profile today!', 'warning')
+        
+    return redirect(request.referrer or url_for('home'))
+
+
+@app.route('/profile/')
+@app.route('/profile/<path:username>')
+@login_required
+def profile(username=None):
+    if not username:
+        return redirect(url_for('profile', username=current_user.username))
+
+    decoded_username = unquote(username).strip()
+    user = User.query.filter(User.username.ilike(decoded_username)).first()
+    
+    if not user:
+        flash(f"User '{decoded_username}' not found!", "danger")
+        return redirect(url_for('home'))
+
+    try:
+        real_followers = Follow.query.filter_by(followed_id=user.id).count()
+        followers_count = user.fake_followers if user.fake_followers and str(user.fake_followers).strip() not in ['', '0', 'None'] else real_followers
+    except Exception as e:
+        app.logger.error(f"Followers check error: {e}")
+        followers_count = 0
+
+    try:
+        real_profile_likes = ProfileLike.query.filter_by(receiver_id=user.id).count()
+        profile_likes_count = user.fake_likes if user.fake_likes and str(user.fake_likes).strip() not in ['', '0', 'None'] else real_profile_likes
+    except Exception as e:
+        app.logger.error(f"Likes check error: {e}")
+        profile_likes_count = 0
+
+    is_following = False
+    try:
+        is_following = Follow.query.filter_by(follower_id=current_user.id, followed_id=user.id).first() is not None
+    except Exception as e:
+        app.logger.error(f"Is following check error: {e}")
+
+    user_posts = []
+    try:
+        user_posts = Post.query.filter_by(user_id=user.id).order_by(Post.id.desc()).all()
+    except Exception as e:
+        app.logger.error(f"User posts query error: {e}")
+
+    friendship = None
+    try:
+        friendship = Friendship.query.filter(
+            ((Friendship.sender_id == current_user.id) & (Friendship.receiver_id == user.id)) |
+            ((Friendship.sender_id == user.id) & (Friendship.receiver_id == current_user.id))
+        ).first()
+    except Exception as e:
+        app.logger.error(f"Friendship query error: {e}")
+
+    return render_template(
+        'profile.html',
+        user=user,
+        followers_count=followers_count,
+        profile_likes_count=profile_likes_count,
+        is_following=is_following,
+        user_posts=user_posts,
+        friendship=friendship
+    )
+
+
+@app.route('/edit_profile', methods=['POST'])
+@login_required
+def edit_profile():
+    nickname = request.form.get('nickname', '').strip()
+    pfp_url = request.form.get('pfp_url')
+    bio = request.form.get('bio', '').strip()
+    like_type_style = request.form.get('like_type_style')
+    
+    if contains_banned_words(nickname) or contains_banned_words(bio):
+        flash('Your profile changes contained inappropriate words! 🚫', 'danger')
+        return redirect(url_for('profile', username=current_user.username))
+
+    if nickname: current_user.nickname = nickname
+    if pfp_url: current_user.pfp_url = pfp_url
+    if bio: current_user.bio = bio
+    if like_type_style: current_user.like_type_style = like_type_style
+        
+    db.session.commit()
+    flash('Profile updated! ✨', 'success')
+    return redirect(url_for('profile', username=current_user.username))
+
+
+@app.route('/admin')
+@login_required
+def admin_panel():
+    if not current_user.is_admin:
+        flash("Access denied! Admins only. 🚫", "danger")
+        return redirect(url_for('home'))
+        
+    all_users = User.query.all()
+    all_posts = Post.query.order_by(Post.id.desc()).all()
+    return render_template('admin.html', users=all_users, posts=all_posts)
+
+
+@app.route('/admin/gui-update', methods=['POST'])
+@login_required
+def admin_gui_update():
+    if not current_user.is_admin:
+        flash("Access denied! Admins only. 🚫", "danger")
+        return redirect(url_for('home'))
+
+    setting_name = request.form.get('setting_name')
+    flash(f"Updated GUI setting {setting_name}! ✨", "success")
+    return redirect(request.referrer or url_for('admin_panel'))
+
+
+@app.route('/admin/fake_stats/<int:user_id>', methods=['POST'])
 @login_required
 def fake_stats(user_id):
     if not current_user.is_admin:
         return redirect(url_for('home'))
-    u = User.query.get_or_404(user_id)
-    u.fake_followers = request.form.get('fake_followers', '0')
-    u.fake_likes = request.form.get('fake_likes', '0')
+        
+    user = User.query.get_or_404(user_id)
+    user.fake_followers = request.form.get('fake_followers') or None
+    user.fake_likes = request.form.get('fake_likes') or None
     db.session.commit()
-    flash(f"Updated stats for @{u.username}!", "success")
-    return redirect(url_for('admin_panel'))
+    
+    flash('Fake stats applied! 🪄', 'success')
+    return redirect(request.referrer or url_for('admin_panel'))
 
 
-@app.route('/fake_post_likes/<int:post_id>', methods=['POST'])
+@app.route('/admin/fake_post_likes/<int:post_id>', methods=['POST'])
 @login_required
 def fake_post_likes(post_id):
     if not current_user.is_admin:
         return redirect(url_for('home'))
-    p = Post.query.get_or_404(post_id)
-    p.fake_likes = request.form.get('fake_likes', '0')
+        
+    post = Post.query.get_or_404(post_id)
+    post.fake_likes = request.form.get('fake_likes') or None
     db.session.commit()
-    flash(f"Updated likes override for Post #{p.id}!", "success")
-    return redirect(url_for('admin_panel'))
+    
+    flash('Post fake likes applied! 🪄', 'success')
+    return redirect(request.referrer or url_for('admin_panel'))
 
 
-# ----------------- ADMIN DIRECTORY SCAN & COMMAND ENGINE -----------------
+# ----------------- ADMIN DIRECTORY SCAN ROUTE -----------------
 
 @app.route('/admin/dir_scan')
 @login_required
 def admin_dir_scan():
     if not current_user.is_admin:
+        flash("Access denied! Admins only. 🚫", "danger")
         return redirect(url_for('home'))
     
     all_users = User.query.all()
@@ -817,40 +1233,32 @@ def admin_dir_scan():
 @login_required
 def admin_execute_command():
     if not current_user.is_admin:
+        flash("Access denied! Admins only. 🚫", "danger")
         return redirect(url_for('home'))
-        
+
     command_str = request.form.get('command_str', '').strip()
-    
+    if not command_str:
+        return redirect(url_for('admin_panel'))
+
     if command_str.lower() == '/dir/s':
         return redirect(url_for('admin_dir_scan'))
-        
-    parts = command_str.split()
-    if not parts:
-        flash("No command entered!", "warning")
-        return redirect(url_for('admin_panel'))
-        
+
+    parts = command_str.split(' ')
     cmd_name = parts[0].lower()
-    cmd_args = parts[1:]
-    
+    args = parts[1:]
+
     if cmd_name in COMMAND_REGISTRY:
-        msg, category = COMMAND_REGISTRY[cmd_name](cmd_args)
-        flash(msg, category)
+        try:
+            msg, category = COMMAND_REGISTRY[cmd_name](args)
+            flash(msg, category)
+        except Exception as e:
+            flash(f"Error executing {cmd_name}: {e}", "danger")
     else:
-        flash(f"Unknown command: {cmd_name}. Type /dir/s or check the command list!", "danger")
-        
+        flash(f"Command '{cmd_name}' not recognized. Check the 50 Commands list for reference.", "warning")
+
     return redirect(url_for('admin_panel'))
 
 
-@app.route('/admin')
-@login_required
-def admin_panel():
-    if not current_user.is_admin:
-        return redirect(url_for('home'))
-        
-    users = User.query.all()
-    posts = Post.query.all()
-    return render_template('admin.html', users=users, posts=posts)
-
-
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=True)
