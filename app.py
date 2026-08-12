@@ -240,7 +240,7 @@ def init_database():
 
 init_database()
 
-# ----------------- DYNAMIC COMMAND ENGINE (50 REAL COMMANDS) -----------------
+# ----------------- DYNAMIC COMMAND ENGINE (51 COMMANDS) -----------------
 
 COMMAND_REGISTRY = {}
 
@@ -532,7 +532,7 @@ def cmd_reject_all(args):
     db.session.commit()
     return "Rejected all pending verification requests!", "info"
 
-# --- 41-50: Security, Server Management & Friendships ---
+# --- 41-51: Security, Server Management & Directory Scan ---
 @register_cmd('/reset_password')
 def cmd_passwd(args):
     if len(args) >= 2:
@@ -594,7 +594,75 @@ def cmd_clear_friends(args):
     return "User not found!", "danger"
 
 
-# ----------------- ROUTES -----------------
+# ----------------- STANDARD CORE APP ROUTES -----------------
+
+@app.route('/')
+def home():
+    posts = Post.query.order_by(Post.created_at.desc()).all()
+    return render_template('home.html', posts=posts)
+
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '').strip()
+        user = User.query.filter_by(username=username).first()
+        
+        if user and check_password_hash(user.password_hash, password):
+            if user.is_banned:
+                flash('Your account has been banned by an administrator! 🔨', 'danger')
+                return redirect(url_for('login'))
+            login_user(user)
+            flash('Logged in successfully! 🚀', 'success')
+            return redirect(url_for('home'))
+        else:
+            flash('Invalid username or password!', 'danger')
+    return render_template('login.html')
+
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        nickname = request.form.get('nickname', '').strip() or username
+        password = request.form.get('password', '').strip()
+        
+        if contains_banned_words(username) or contains_banned_words(nickname):
+            flash('Username or nickname contains restricted words! 🚫', 'danger')
+            return redirect(url_for('register'))
+
+        if User.query.filter_by(username=username).first():
+            flash('Username already exists!', 'danger')
+            return redirect(url_for('register'))
+
+        new_user = User(
+            username=username,
+            nickname=nickname,
+            password_hash=generate_password_hash(password)
+        )
+        db.session.add(new_user)
+        db.session.commit()
+        login_user(new_user)
+        flash('Account created successfully! 🎉', 'success')
+        return redirect(url_for('home'))
+    return render_template('register.html')
+
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    flash('Logged out successfully!', 'info')
+    return redirect(url_for('home'))
+
+
+@app.route('/profile/<username>')
+def profile(username):
+    user = User.query.filter_by(username=username).first_or_404()
+    posts = Post.query.filter_by(user_id=user.id).order_by(Post.created_at.desc()).all()
+    return render_template('profile.html', profile_user=user, posts=posts)
+
 
 @app.route('/chatgpt')
 @login_required
@@ -606,19 +674,17 @@ def ai_chat():
 @login_required
 def ask_ai():
     prompt = request.form.get('prompt', '').strip()
-    
     if not prompt:
         return {"reply": "Please enter a message! 🤖"}
 
     if not GROQ_API_KEY or GROQ_API_KEY == "YOUR_GROQ_API_KEY_HERE":
-        return {"reply": "Groq API Key is missing! Please set GROQ_API_KEY in Render settings or inside app.py ⚠️"}
+        return {"reply": "Groq API Key is missing! Please set GROQ_API_KEY in Render settings ⚠️"}
 
     endpoint = "https://api.groq.com/openai/v1/chat/completions"
     headers = {
         "Authorization": f"Bearer {GROQ_API_KEY}",
         "Content-Type": "application/json"
     }
-    
     payload = {
         "model": "llama-3.3-70b-versatile",
         "messages": [
@@ -630,12 +696,10 @@ def ask_ai():
     try:
         response = requests.post(endpoint, json=payload, headers=headers, timeout=10)
         data = response.json()
-        
         if "choices" in data and len(data["choices"]) > 0:
-            reply_text = data["choices"][0]["message"]["content"]
-            return {"reply": reply_text}
+            return {"reply": data["choices"][0]["message"]["content"]}
         else:
-            return {"reply": "AI response error. Please check your Groq API key or quota! ⚠️"}
+            return {"reply": "AI response error. Please check your Groq API key quota! ⚠️"}
     except Exception as e:
         return {"reply": f"Failed to connect to Groq API: {e}"}
 
@@ -648,18 +712,6 @@ def verification_page():
         return redirect(url_for('profile', username=current_user.username))
         
     if request.method == 'POST':
-        recaptcha_response = request.form.get('g-recaptcha-response')
-        verify_url = "https://www.google.com/recaptcha/api/siteverify"
-        payload = {'secret': RECAPTCHA_SECRET_KEY, 'response': recaptcha_response}
-        try:
-            res = requests.post(verify_url, data=payload, timeout=5).json()
-            if not res.get('success'):
-                flash('Please complete the "I am not a robot" test! 🤖🚫', 'danger')
-                return redirect(url_for('verification_page'))
-        except Exception:
-            flash('reCAPTCHA verification failed! Try again.', 'danger')
-            return redirect(url_for('verification_page'))
-
         file = request.files.get('face_photo')
         if not file or file.filename == '':
             flash('Please upload a valid face photo! 📷', 'danger')
@@ -680,49 +732,64 @@ def verification_page():
             face_photo_url=face_photo_url,
             link_1=request.form.get('link_1', '').strip(),
             link_2=request.form.get('link_2', '').strip(),
-            link_3=request.form.get('link_3', '').strip(),
-            link_4=request.form.get('link_4', '').strip(),
-            link_5=request.form.get('link_5', '').strip()
+            link_3=request.form.get('link_3', '').strip()
         )
         db.session.add(req)
         db.session.commit()
-        flash('Verification request submitted! Admin will review your application. 📩', 'success')
+        flash('Verification request submitted successfully! 📩', 'success')
         return redirect(url_for('profile', username=current_user.username))
 
     return render_template('verification.html')
 
 
-@app.route('/admin/verify_action/<int:req_id>', methods=['POST'])
+@app.route('/mailbox', methods=['GET', 'POST'])
 @login_required
-def verify_action(req_id):
+def mailbox():
+    if request.method == 'POST':
+        receiver_id = request.form.get('receiver_id')
+        subject = request.form.get('subject', '').strip()
+        content = request.form.get('content', '').strip()
+        
+        if receiver_id and subject and content:
+            db.session.add(Mail(sender_id=current_user.id, receiver_id=int(receiver_id), subject=subject, content=content))
+            db.session.commit()
+            flash('Mail sent successfully! ✉️', 'success')
+            return redirect(url_for('mailbox'))
+        else:
+            flash('Please fill out all fields!', 'danger')
+
+    received_mails = Mail.query.filter_by(receiver_id=current_user.id).order_by(Mail.created_at.desc()).all()
+    sent_mails = Mail.query.filter_by(sender_id=current_user.id).order_by(Mail.created_at.desc()).all()
+    users = User.query.filter(User.id != current_user.id).all()
+    return render_template('mailbox.html', received_mails=received_mails, sent_mails=sent_mails, users=users)
+
+
+@app.route('/fake_stats/<int:user_id>', methods=['POST'])
+@login_required
+def fake_stats(user_id):
     if not current_user.is_admin:
         return redirect(url_for('home'))
-        
-    req_item = VerificationRequest.query.get_or_404(req_id)
-    action = request.form.get('action')
-    reason = request.form.get('reason', '').strip()
-    target_user = User.query.get(req_item.user_id)
-    
-    if action == 'approve':
-        req_item.status = 'approved'
-        target_user.is_verified = True
-        flash(f"Approved verification for {target_user.username}! ✅", "success")
-    elif action == 'reject':
-        req_item.status = 'rejected'
-        req_item.reject_reason = reason
-        target_user.is_verified = False
-        flash(f"Rejected verification for {target_user.username}. ❌", "info")
-
+    u = User.query.get_or_404(user_id)
+    u.fake_followers = request.form.get('fake_followers', '0')
+    u.fake_likes = request.form.get('fake_likes', '0')
     db.session.commit()
-    return redirect(request.referrer or url_for('mailbox'))
+    flash(f"Updated stats for @{u.username}!", "success")
+    return redirect(url_for('admin_panel'))
 
 
-@app.route('/call/<int:user_id>')
+@app.route('/fake_post_likes/<int:post_id>', methods=['POST'])
 @login_required
-def video_call(user_id):
-    target_user = User.query.get_or_404(user_id)
-    return render_template('video_call.html', target_user=target_user)
+def fake_post_likes(post_id):
+    if not current_user.is_admin:
+        return redirect(url_for('home'))
+    p = Post.query.get_or_404(post_id)
+    p.fake_likes = request.form.get('fake_likes', '0')
+    db.session.commit()
+    flash(f"Updated likes override for Post #{p.id}!", "success")
+    return redirect(url_for('admin_panel'))
 
+
+# ----------------- ADMIN DIRECTORY SCAN & COMMAND ENGINE -----------------
 
 @app.route('/admin/dir_scan')
 @login_required
@@ -769,7 +836,7 @@ def admin_execute_command():
         msg, category = COMMAND_REGISTRY[cmd_name](cmd_args)
         flash(msg, category)
     else:
-        flash(f"Unknown command: {cmd_name}. Type /dir/s or check the 50 commands list!", "danger")
+        flash(f"Unknown command: {cmd_name}. Type /dir/s or check the command list!", "danger")
         
     return redirect(url_for('admin_panel'))
 
