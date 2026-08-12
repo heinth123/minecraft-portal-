@@ -598,7 +598,7 @@ def cmd_clear_friends(args):
 
 @app.route('/chatgpt')
 @login_required
-def chat():
+def ai_chat():
     return render_template('ai_chat.html')
 
 
