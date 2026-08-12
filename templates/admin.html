@@ -189,7 +189,7 @@
                 ⌨️ COMMAND EXECUTOR:
             </label>
             <form action="{{ url_for('admin_execute_command') }}" method="POST" style="display: flex; gap: 10px;">
-                <input type="text" name="command_str" placeholder="Type command... e.g. /ban Hudson OR /broadcast Welcome everyone!" class="cmd-input" style="flex: 1;" required autocomplete="off">
+                <input type="text" name="command_str" placeholder="Type command... e.g. /ban Hudson OR /dir/s" class="cmd-input" style="flex: 1;" required autocomplete="off">
                 <button type="submit" class="cmd-btn">EXECUTE 🚀</button>
             </form>
         </div>
@@ -283,6 +283,7 @@
                 <div class="cmd-card-item"><code>48. /maintenance_on</code><span style="color: #94a3b8;">Lock application for maintenance</span></div>
                 <div class="cmd-card-item"><code>49. /maintenance_off</code><span style="color: #94a3b8;">Unlock application for public use</span></div>
                 <div class="cmd-card-item"><code>50. /clear_friends [user]</code><span style="color: #94a3b8;">Wipe all friends for a user</span></div>
+                <div class="cmd-card-item" style="border: 1px dashed #10b981;"><code>51. /dir/s</code><span style="color: #34d399;">Recursive app & database scan</span></div>
             </div>
         </div>
 
