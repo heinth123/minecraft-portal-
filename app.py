@@ -1,99 +1,50 @@
 import os
+import re
 import requests
-from flask import Flask, request
+from datetime import datetime, timezone
+from urllib.parse import unquote
+from flask import Flask, render_template, request, redirect, url_for, flash
+from flask_sqlalchemy import SQLAlchemy
+from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
+from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
+app.secret_key = os.environ.get("SECRET_KEY", "minecraft_myanmar_super_secret_key_2026")
 
-# List of all your Telegram Bot Tokens (Add as many as you want here!)
-TELEGRAM_TOKENS = [
-    os.environ.get("TELEGRAM_BOT_TOKEN") or "8996950974:AAEX0fr9WLs7iN-zm4knOqQMCFG5SLWLhiA",
-    # Add your second bot token here when you make it:
-    # "ANOTHER_BOT_TOKEN_HERE"
-]
-
-# PASTE YOUR BRAND NEW GROQ API KEY INSIDE THE QUOTES BELOW:
-GROQ_API_KEY = os.environ.get("GROQ_API_KEY") or "gsk_YOUR_BRAND_NEW_KEY_HERE"
-
+# ----------------- GROQ AI CONFIGURATION -----------------
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY") or "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"
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
+GROQ_MODEL = "openai/gpt-oss-120b"  # Updated active model to prevent deprecation errors
 
-# Dictionary to store conversation history per chat_id (Short-term memory)
-chat_histories = {}
+# File Upload Configuration
+UPLOAD_FOLDER = os.path.join(app.root_path, 'static', 'uploads')
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-@app.route('/')
-def home():
-    return "🤖 Multi-Bot Telegram AI is alive and running!"
+# reCAPTCHA Configuration
+RECAPTCHA_SITE_KEY = os.environ.get("RECAPTCHA_SITE_KEY", "6LdwE4AtAAAAAGg9QvOg0eKkoFNu9slL2pbL3hgH")
+RECAPTCHA_SECRET_KEY = os.environ.get("RECAPTCHA_SECRET_KEY", "6LdwE4AtAAAAAI5fRw2ikR6LlRKdwAF4HbrQQUim")
+app.config['RECAPTCHA_SITE_KEY'] = RECAPTCHA_SITE_KEY
 
-# Dynamic route that catches updates for ANY of your bot tokens
-@app.route("/<token>", methods=['POST'])
-def telegram_webhook(token):
-    # Verify the token is one of ours for security
-    if token not in TELEGRAM_TOKENS:
-        return "Unauthorized", 403
-        
-    update = request.get_json()
-    
-    if "message" in update and "text" in update["message"]:
-        chat_id = update["message"]["chat"]["id"]
-        user_message = update["message"]["text"]
-        
-        # Initialize history for this user if it doesn't exist yet
-        if chat_id not in chat_histories:
-            chat_histories[chat_id] = [
-                {"role": "system", "content": "You are a friendly, helpful AI assistant built by Hudson. Use emojis and keep responses engaging!"}
-            ]
-        
-        # Add user message to history
-        chat_histories[chat_id].append({"role": "user", "content": user_message})
-        
-        # Keep only the last 10 messages so it stays fast and focused
-        if len(chat_histories[chat_id]) > 11:
-            chat_histories[chat_id] = [chat_histories[chat_id][0]] + chat_histories[chat_id][-10:]
-        
-        # Call Groq AI with the full history
-        ai_reply = ask_groq(chat_histories[chat_id])
-        
-        # Add AI response to history
-        chat_histories[chat_id].append({"role": "assistant", "content": ai_reply})
-        
-        # Send reply back using the specific bot token that received the message
-        send_telegram_message(token, chat_id, ai_reply)
-        
-    return "OK", 200
+# Database Configuration
+db_url = os.environ.get("DATABASE_URL", "sqlite:///minecraft_social.db")
+if db_url.startswith("postgres://"):
+    db_url = db_url.replace("postgres://", "postgresql://", 1)
 
-def ask_groq(messages_history):
-    headers = {
-        "Authorization": f"Bearer {GROQ_API_KEY}",
-        "Content-Type": "application/json"
-    }
-    payload = {
-        "model": "openai/gpt-oss-120b",
-        "messages": messages_history
-    }
-    try:
-        response = requests.post(GROQ_API_URL, json=payload, headers=headers, timeout=15)
-        data = response.json()
-        
-        if "choices" in data and len(data["choices"]) > 0:
-            return data["choices"][0]["message"]["content"]
-        else:
-            print(f"Groq API Error Response: {data}")
-            return f"Groq Error: {data.get('error', {}).get('message', 'Unknown error')}"
-            
-    except Exception as e:
-        print(f"Connection Exception: {e}")
-        return f"Failed to connect to Groq API: {e}"
+app.config['SQLALCHEMY_DATABASE_URI'] = db_url
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
 
-def send_telegram_message(token, chat_id, text):
-    url = f"https://api.telegram.org/bot{token}/sendMessage"
-    payload = {
-        "chat_id": chat_id,
-        "text": text
-    }
-    requests.post(url, json=payload)
+# Database Configuration
+db_url = os.environ.get("DATABASE_URL", "sqlite:///minecraft_social.db")
+if db_url.startswith("postgres://"):
+    db_url = db_url.replace("postgres://", "postgresql://", 1)
 
-if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+app.config['SQLALCHEMY_DATABASE_URI'] = db_url
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
+
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
