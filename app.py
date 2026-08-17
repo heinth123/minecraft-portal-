@@ -15,7 +15,7 @@ app.secret_key = os.environ.get("SECRET_KEY", "minecraft_myanmar_super_secret_ke
 # ----------------- GROQ AI CONFIGURATION -----------------
 # Option 1 (Recommended): Set GROQ_API_KEY in your Render environment variables.
 # Option 2: Paste your Groq API key directly into the quotes below (e.g. "gsk_...").
-GROQ_API_KEY = os.environ.get("GROQ_API_KEY") or "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"
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY") or "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"
 
 # File Upload Configuration
 UPLOAD_FOLDER = os.path.join(app.root_path, 'static', 'uploads')
